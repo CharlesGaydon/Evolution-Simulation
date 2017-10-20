@@ -7,6 +7,20 @@ import simulation
 import utils
 PARAMS = {}
 
+"""
+TODO :
+- parser au debut de start_evol_simulation (lister au passage paramères dans readme.md)
+- Problème avec le parser dans start_transcribing lorsqu'on est dans le working dir
+-> fonction de utils ne trouve pas de section ; probablement un problème de path qui n'est pas
+absolu. Essayer de résoudre !
+- Qd n!=1 :
+#NONcréer une population et la stocker
+        #chaque individu est crée avec le fichier de params.ini comme argument, #PAS ENCORE car N=1
+
+    #boucler SIM_TIME fois (en nombre de mut ?)
+        #tirer les mutations possibles et les exécuter ; 
+"""
+
 def start_evol_simulation(INI_file) :
 
     #import model parameters from INI_fileparams_evol.init (dont le nom du fichier params.init)
@@ -14,19 +28,16 @@ def start_evol_simulation(INI_file) :
     PARAMS['U'] = 150
     PARAMS['POP_SIZE'] = 1 #pour l'instant on ne gere que ce cas. N>1 plus tard.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  [0.33,0.33,0.33]
+    PARAMS['probs'] =  [1/3.0,1/3.0,1/3.0]
+    PARAMS['perfection'] = [1/10.0]*10
     PARAMS['w_path_1'] = "tousgenesidentiques/N_1/pIns_0.33/pDel_0.33/pInv_0.33/1/" #TODO : automatiser
     PARAMS['w_path_2'] = "tousgenesidentiques/N_1/pIns_0.33/pDel_0.33/pInv_0.33/2/"
     os.system("mkdir -p " + PARAMS['w_path_1']) #à adapter et peut etre deplacer dans plasmid.
     os.system("mkdir -p " + PARAMS['w_path_2'])
 
     Plasmid = plasmid()
-    #créer une population et la stocker
-        #chaque individu est crée avec le fichier de params.ini comme argument, #PAS ENCORE car N=1
-
-    #boucler SIM_TIME fois (en nombre de mut ?)
-        #tirer les mutations possibles et les exécuter ; 
     Plasmid.mutate()
+
         #lancer la simulation : mutation, (N=1 : création d'un fichier next_params.ini et des fichiers 
         #TTS TSS GFF Prot ... _next correspondant)
         #N!=1 : actualisation des fichiers de donné.
@@ -35,56 +46,66 @@ def start_evol_simulation(INI_file) :
         #actualiser ensuite les individus (si un seul individu inclure Metropolis dans l'individu.)
         #si plusieurs individus, reprod sexuelle impossible... duplication simple ?
         #differencier les logs si N = 1 ou N > 1 
-    #ptit plot de l'évolution de la fitness max qui fait plaiz'
-
-
+        #ptit plot de l'évolution de la fitness max qui fait plaiz'
 
 class plasmid:
 
     def __init__(self, ID = 1):
         self.ID = ID
-        self.probs = PARAMS['probs']
-        self.w_path_1 = PARAMS['w_path_1']
-        self.w_path_2 = PARAMS['w_path_2']
-        self.o_path = PARAMS['path_params_seq']
-        # self.path_params_seq = PARAMS['path_params_seq'] #useless ?
+        self.time = 0
+        self.do_my = {"Ins":self.U_insertion, "Del": self.U_deletion, "Inv":self.U_inversion} #TODO : add inversion
+        self.data = utils.import_data_from_params_seq_file(PARAMS["path_params_seq"]+"params_seq.ini")
+        
         # copy of files in the working paths
-        utils.copy_to_working_path(PARAMS['path_params_seq'], self.w_path_1)
-        utils.copy_to_working_path(PARAMS['path_params_seq'], self.w_path_2)
-        self.data = utils.import_data_from_params_seq_file(self.o_path+"params_seq.ini")
+        utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])
+        utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_2"])
         
-        
-        #lancer une première simulation pour calculer fitness de w_path_1
-        self.fitness = 0
+        #self.fitness = self.get_fitness(PARAMS["w_path_1"]+"params.seq", PARAMS["w_path_1"])
+        self.fitness = 500 #TODO : change
         self.hist_fitness = [self.fitness]
-    def save(self) :
-        #to save hist_fitness, and maybe other stuff, later
-        pass
+        self.hist_event = []
+        #TODO : réfléchir à l'historique dans le cas ou on n'a pas forcément un evenement qui arrive !
+        # possibilité pour event : créer une ligne text de la forme
+        # Inv 1546
+        # (seule)    
 
     def mutate(self) : 
-        #tirage et choix de la mut
-        #  generation des updated data et
-        # sauvegarde dans files de w_path_2
-        # lancer simulation avec params_seq de w_path_2
+        choice = np.random.choice(["Ins","Del","Inv"],p = PARAMS["probs"]) #pour linstant systématique. Changer ?
+        apply_mut = self.do_my[choice]
+
+        print("The event is : " +choice)
+        #print(self.data)
+        updated_data = apply_mut(self.data)
+        #print(updated_data)
+        utils.save_data_to_path(updated_data,PARAMS["w_path_2"])
+
+        #next_fitness = self.get_fitness(PARAMS["w_path_2"]+"params.seq",PARAMS["w_path_2"])
+        next_fitness = 1000 #TODO : change
+        if self.keep_mutated(next_fitness) :
+
+            self.fitness = next_fitness
+            self.hist_fitness.append(self.fitness)
+            self.hist_event.append(choice)
+            self.data = copy.deepcopy(updated_data)      
+            #chosir enfin d'alterner les working space ou non...
+    
+    def get_fitness(self,params_file, w_path):
+        output = simulation.start_transcribing(params_file, w_path)
+        nb_transcribed = np.array([10.0,20.0],dtype=float) 
+        #TODO : trouver lequel element c'est dans output et si les identifiants correspondent.
+        proportions = nb_transcribed/sum(nb_transcribed)
+        return(-abs(proportions-PARAMS["perfection"])/len(nb_transcribed))
+    def keep_mutated(self,next_fitness):
+        if next_fitness>self.fitness:
+            return(True)
+        else : 
+            e = self.fitness-next_fitness
+            return(np.random.choice([True,False],p = [0.1,0.9])) ## TODO : write formula for p !!
+
         
-        #test
-        print(self.data)
-        updated_data = self.U_deletion()
-        print(updated_data)
-        utils.save_data_to_path(updated_data,self.w_path_2)
-
-        #calculer fitness
-        #comparer et conserver w1 ou w2
-        #actualiser en conséquence.
-
-        # puis
-        # enregistrer la fitness dans self.fitness et updater l'historique
-        # enfin
-        # update le self.data choisi for next mutation
-        pass
-
-    def U_deletion(self) :
-        data = self.data
+    def U_inversion(self,data):
+        return(copy.deepcopy(data))
+    def U_deletion(self,data) :
         l = data['GFF']['seq_length']
         #localisation
         start=np.random.randint(1,l+1)
@@ -108,7 +129,7 @@ class plasmid:
         updated_data['GFF']['seq_length']=l-PARAMS['U']
         return(updated_data)
 
-    def U_insertion(self) : 
+    def U_insertion(self,data) : 
         data = self.data
         l = data['GFF']['seq_length']
         #localisation
@@ -126,3 +147,8 @@ class plasmid:
         updated_data['GFF']['seq'].columns.values[4] = str(l+PARAMS['U']) 
         updated_data['GFF']['seq_length']=l+PARAMS['U']
         return(updated_data)
+    
+    def save(self) :
+        #to save hist_fitness, and maybe other stuff, later
+        pass
+    

@@ -38,14 +38,14 @@ def import_data_from_params_seq_file(path):
     return(data)
 
 def copy_to_working_path(path_params_seq, working_path):
-    #modify the config file
+    #modify the config file from path_params_seq and copy it in working_path.
     config = simulation.read_config_file(path_params_seq+"params_seq.ini")
     config.set('INPUTS','TSS', working_path+"TSS.dat")
     config.set('INPUTS','TTS', working_path+"TTS.dat")
     config.set('INPUTS','GFF', working_path+"GFF.gff")
     config.set('INPUTS','BARR_FIX', working_path+"prot.dat")
     #write it in working_path
-    with open(working_path+"params_seq.ini", 'w)' as configfile:
+    with open(working_path+"params_seq.ini", 'w') as configfile:
         config.write(configfile)
     #copy the files.
     oss("cp "+path_params_seq+"TSS.dat "+working_path+"TSS.dat")
@@ -54,4 +54,8 @@ def copy_to_working_path(path_params_seq, working_path):
     oss("cp "+path_params_seq+"gff.gff "+working_path+"gff.gff")
 
 def save_data_to_path(data,working_path):
+    print("saving",data)
     data["TTS"].to_csv(working_path+"TTS.dat", sep='\t',h=True,index=False)
+    data["TSS"].to_csv(working_path+"TSS.dat", sep='\t',h=True,index=False)
+    data["GFF"]["seq"].to_csv(working_path+"GFF.gff", sep='\t',h=True,index=False)
+    data["Prot"].to_csv(working_path+"Prot.dat", sep='\t',h=True,index=False)
