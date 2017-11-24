@@ -70,8 +70,12 @@ class plasmid:
         # (seule)    
 
     def mutate(self) : 
+
         choice = np.random.choice(["Ins","Del","Inv"],p = PARAMS["probs"]) #pour linstant systématique. Changer ?
-        apply_mut = self.do_my[choice]
+
+        #apply_mut = self.do_my[choice]
+        apply_mut = self.U_deletion #for testing purpose
+
 
         print("The event is : " +choice)
         #print(self.data)
@@ -87,6 +91,7 @@ class plasmid:
             self.hist_fitness.append(self.fitness)
             self.hist_event.append(choice)
             self.data = copy.deepcopy(updated_data)  #Deep-copy obligatoire ?
+            
             #chosir enfin d'alterner les working space ou non...
     
     def get_fitness(self,params_file, w_path):
@@ -95,6 +100,7 @@ class plasmid:
         #TODO : trouver lequel element c'est dans output et si les identifiants correspondent.
         proportions = nb_transcribed/sum(nb_transcribed)
         return(-abs(proportions-PARAMS["perfection"])/len(nb_transcribed))
+        
     def keep_mutated(self,next_fitness):
         if next_fitness>self.fitness:
             return(True)
@@ -110,15 +116,32 @@ class plasmid:
     def U_deletion(self,data) :
         
         l = data['GFF']['seq_length']
+        
+        print(PARAMS['U'])
+        
         #localisation
         start=np.random.randint(1,l+1)
         stop = start+PARAMS['U']-1
         #probleme si U est plus grand qu'un gene ! A corriger ! peut etre en amont lors de l'importation...
-        while ((sum((l-data['TSS']['TSS_pos']+start)%l<abs(data['TTS']['TTS_pos']-data['TSS']['TSS_pos']))) | 
-            (sum((l-stop+data['TTS']['TTS_pos'])%l<abs(data['TTS']['TTS_pos']-data['TSS']['TSS_pos']))) |
-            (sum(((l-start+data['TSS']['TSS_pos'])%l>=0) & ((l-start+data['TTS']['TTS_pos'])%l<=PARAMS['U']))) |
-            (sum((l-start+data['Prot']['prot_pos'])%l<PARAMS['U']))) : #Prot ok)))  
+        
+    
+        # Why (x + l) %l  ??
+        #while ( (sum( (l - data['TSS']['TSS_pos'] + start) % l < abs( data['TTS']['TTS_pos'] - data['TSS']['TSS_pos'] ) ) )     | 
+                #(sum( (l + data['TTS']['TTS_pos'] - stop)  % l < abs( data['TTS']['TTS_pos'] - data['TSS']['TSS_pos'] ) ) )      |
+                #(sum( ((l - start + data['TSS']['TSS_pos']) % l >= 0) & ((l - start+data['TTS']['TTS_pos']) % l <= PARAMS['U'] ) ) ) |
+                #(sum( (l - start + data['Prot']['prot_pos']) % l < PARAMS['U'] ) ) ) : #Prot ok)))  
+            
+            #start=np.random.randint(1,l+1)
+            
+            #stop = start+PARAMS['U']-1
+
+        while ( ( ( start > data['TSS']['TSS_pos']  ) & ( start  < data['TSS']['TSS_pos'] ) ) |
+                ( ( stop  > data['TSS']['TSS_pos']  ) & ( stop   < data['TSS']['TSS_pos'] ) ) |
+                ( ( data['Prot']['prot_pos'] > data['TSS']['TSS_pos']  ) & ( data['Prot']['prot_pos'] < data['TSS']['TSS_pos'] ) ) ) :
+                
+            
             start=np.random.randint(1,l+1)
+            
             stop = start+PARAMS['U']-1
 
         #deletion 
