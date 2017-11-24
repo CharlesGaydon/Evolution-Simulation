@@ -53,9 +53,11 @@ def copy_to_working_path(path_params_seq, working_path):
     oss("cp "+path_params_seq+"prot.dat "+working_path+"prot.dat")
     oss("cp "+path_params_seq+"gff.gff "+working_path+"gff.gff")
 
+# Removed 'h=True' because this argument is not known by my Pandas version ...
+# Seems to work
 def save_data_to_path(data,working_path):
     print("saving",data)
-    data["TTS"].to_csv(working_path+"TTS.dat", sep='\t',h=True,index=False)
-    data["TSS"].to_csv(working_path+"TSS.dat", sep='\t',h=True,index=False)
-    data["GFF"]["seq"].to_csv(working_path+"GFF.gff", sep='\t',h=True,index=False)
-    data["Prot"].to_csv(working_path+"Prot.dat", sep='\t',h=True,index=False)
+    data["TTS"].to_csv(working_path+"TTS.dat", sep='\t', index=False)
+    data["TSS"].to_csv(working_path+"TSS.dat", sep='\t', index=False)
+    data["GFF"]["seq"].to_csv(working_path+"GFF.gff", sep='\t',index=False)
+    data["Prot"].to_csv(working_path+"Prot.dat", sep='\t',index=False)

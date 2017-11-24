@@ -86,7 +86,7 @@ class plasmid:
             self.fitness = next_fitness
             self.hist_fitness.append(self.fitness)
             self.hist_event.append(choice)
-            self.data = copy.deepcopy(updated_data)      
+            self.data = copy.deepcopy(updated_data)  #Deep-copy obligatoire ?
             #chosir enfin d'alterner les working space ou non...
     
     def get_fitness(self,params_file, w_path):
@@ -102,10 +102,13 @@ class plasmid:
             e = self.fitness-next_fitness
             return(np.random.choice([True,False],p = [0.1,0.9])) ## TODO : write formula for p !!
 
-        
+    #TODO
     def U_inversion(self,data):
+        
         return(copy.deepcopy(data))
+        
     def U_deletion(self,data) :
+        
         l = data['GFF']['seq_length']
         #localisation
         start=np.random.randint(1,l+1)
