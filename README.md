@@ -15,6 +15,16 @@ Hypothesis : ...
 - Charles GAYDON
 - Baptiste LAC
 
+### Usage
+First, use :
+
+	conda env create --file EvoEnv.yml
+
+to install a conda env.
+Then activate the EvoEnv environment and run :
+
+	python start_evol_simulation.y params_evo.ini 
+
 
 #### Coding Conventions
 

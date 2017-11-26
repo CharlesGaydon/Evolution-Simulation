@@ -1,0 +1,8 @@
+name: EvoEnv
+dependencies:
+  - python=2.7
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
+  - jupyter

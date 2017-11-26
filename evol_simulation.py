@@ -26,7 +26,7 @@ def start_evol_simulation(INI_file) :
     #import model parameters from INI_fileparams_evol.init (dont le nom du fichier params.init)
     #note : utiliser syntaxe de simulation.read_config_file(path) ?
     PARAMS['U'] = 150
-    PARAMS['POP_SIZE'] = 1 #pour l'instant on ne gere que ce cas. N>1 plus tard.
+    PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
     PARAMS['probs'] =  [1/3.0,1/3.0,1/3.0]
     PARAMS['perfection'] = [1/10.0]*10
@@ -74,7 +74,7 @@ class plasmid:
         choice = np.random.choice(["Ins","Del","Inv"],p = PARAMS["probs"]) #pour linstant systématique. Changer ?
 
         #apply_mut = self.do_my[choice]
-        apply_mut = self.U_deletion #for testing purpose
+        apply_mut = self.U_insertion #for testing purpose
 
 
         print("The event is : " +choice)
@@ -135,7 +135,7 @@ class plasmid:
             
             #stop = start+PARAMS['U']-1
 
-        while ( ( ( start > data['TSS']['TSS_pos']  ) & ( start  < data['TSS']['TSS_pos'] ) ) |
+        while sum( ( ( start > data['TSS']['TSS_pos']  ) & ( start  < data['TSS']['TSS_pos'] ) ) |
                 ( ( stop  > data['TSS']['TSS_pos']  ) & ( stop   < data['TSS']['TSS_pos'] ) ) |
                 ( ( data['Prot']['prot_pos'] > data['TSS']['TSS_pos']  ) & ( data['Prot']['prot_pos'] < data['TSS']['TSS_pos'] ) ) ) :
                 
