@@ -16,14 +16,19 @@ Hypothesis : ...
 - Baptiste LAC
 
 ### Usage
+This code is designed for Linux. 
 First, use :
 
 	conda env create --file EvoEnv.yml
 
 to install a conda env.
-Then activate the EvoEnv environment and run :
+Then activate the EvoEnv environment with :
 
-	python start_evol_simulation.y params_evo.ini 
+	source activate EvoEnv
+
+ and run :
+
+	python start_evol_simulation.py params_evo.ini 
 
 
 #### Coding Conventions

@@ -301,13 +301,12 @@ def start_transcribing(INI_file, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     
     # path to the input files (remove the "params.ini" from the path)
-    pth = INI_file[:-10]    # will fail when the name is "params_seq.ini" !!!
-                            # use REGEX instead ?
-    
-    gff_df_raw = load_gff(pth+GFF_file)
-    tss = load_tab_file(pth+TSS_file)
-    tts = load_tab_file(pth+TTS_file)
-    prot = load_tab_file(pth+Prot_file)
+    pth = '/'.join(INI_file.split('/')[:-1])+'/'    # EDITED : should work for every kind of ini Now!
+                     
+    gff_df_raw = load_gff(GFF_file) # pth+ removed for all 4 import ! 
+    tss = load_tab_file(TSS_file) 
+    tts = load_tab_file(TTS_file)
+    prot = load_tab_file(Prot_file)
 
     # TSS_pos
     TSS_pos = (tss['TSS_pos'].values/DELTA_X).astype(int)
@@ -456,11 +455,14 @@ def start_transcribing(INI_file, output_dir):
             picked_tr = np.random.choice(tss_and_unhooked_RNAPs, len(RNAPs_unhooked_id), replace=False, p=all_prob) #RNAPs_unhooked_id
 
             # This is the KEY !
+            print([picked_tr])
             picked_tr_hooked_id = picked_tr[np.where(picked_tr!=-1)[0]]
             picked_tr_unhooked_id = picked_tr[np.where(picked_tr==-1)[0]]
 
-            new_RNAPs_hooked_id = RNAPs_unhooked_id[np.where(picked_tr==picked_tr_hooked_id)]
-    
+            print([RNAPs_unhooked_id, picked_tr, picked_tr_hooked_id])
+            new_RNAPs_hooked_id = RNAPs_unhooked_id[np.where(picked_tr==picked_tr_hooked_id)]## ORIGINAL
+            ## new_RNAPs_hooked_id = RNAPs_unhooked_id[np.where(picked_tr!=-1)] ##modi possible ?
+            
             RNAPs_tr[new_RNAPs_hooked_id] = picked_tr[picked_tr!=-1]
             RNAPs_strand[new_RNAPs_hooked_id] = tr_strand[picked_tr[np.where(picked_tr!=-1)]]
 
@@ -850,9 +852,10 @@ def resume_transcription(INI_file, resume_path, output_dir):
             # This is the KEY !
             picked_tr_hooked_id = picked_tr[np.where(picked_tr!=-1)[0]]
             picked_tr_unhooked_id = picked_tr[np.where(picked_tr==-1)[0]]
-
+            #print(picked_tr_hooked_id, picked_tr_unhooked_id)
             new_RNAPs_hooked_id = RNAPs_unhooked_id[np.where(picked_tr==picked_tr_hooked_id)] #RNAPs_unhooked_id[picked_tr_hooked_id] 
             RNAPs_tr[new_RNAPs_hooked_id] = picked_tr[picked_tr!=-1]
+            #print(new_RNAPs_hooked_id)
 
             RNAPs_strand[new_RNAPs_hooked_id] = tr_strand[picked_tr[np.where(picked_tr!=-1)]]
 

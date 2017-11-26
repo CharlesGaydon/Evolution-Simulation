@@ -60,7 +60,7 @@ class plasmid:
         utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])
         utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_2"])
         
-        #self.fitness = self.get_fitness(PARAMS["w_path_1"]+"params.seq", PARAMS["w_path_1"])
+        self.fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini", PARAMS["w_path_1"])
         self.fitness = 500 #TODO : change
         self.hist_fitness = [self.fitness]
         self.hist_event = []
@@ -96,8 +96,8 @@ class plasmid:
     
     def get_fitness(self,params_file, w_path):
         output = simulation.start_transcribing(params_file, w_path)
-        nb_transcribed = np.array([10.0,20.0],dtype=float) 
         #TODO : trouver lequel element c'est dans output et si les identifiants correspondent.
+        nb_transcribed = np.array([10.0]*10,dtype=float) 
         proportions = nb_transcribed/sum(nb_transcribed)
         return(-abs(proportions-PARAMS["perfection"])/len(nb_transcribed))
         

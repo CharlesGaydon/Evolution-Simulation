@@ -42,7 +42,7 @@ def copy_to_working_path(path_params_seq, working_path):
     config = simulation.read_config_file(path_params_seq+"params_seq.ini")
     config.set('INPUTS','TSS', working_path+"TSS.dat")
     config.set('INPUTS','TTS', working_path+"TTS.dat")
-    config.set('INPUTS','GFF', working_path+"GFF.gff")
+    config.set('INPUTS','GFF', working_path+"gff.gff")
     config.set('INPUTS','BARR_FIX', working_path+"prot.dat")
     #write it in working_path
     with open(working_path+"params_seq.ini", 'w') as configfile:
