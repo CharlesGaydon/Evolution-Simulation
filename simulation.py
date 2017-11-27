@@ -455,11 +455,11 @@ def start_transcribing(INI_file, output_dir):
             picked_tr = np.random.choice(tss_and_unhooked_RNAPs, len(RNAPs_unhooked_id), replace=False, p=all_prob) #RNAPs_unhooked_id
 
             # This is the KEY !
-            print([picked_tr])
+            
             picked_tr_hooked_id = picked_tr[np.where(picked_tr!=-1)[0]]
             picked_tr_unhooked_id = picked_tr[np.where(picked_tr==-1)[0]]
 
-            print([RNAPs_unhooked_id, picked_tr, picked_tr_hooked_id])
+            
             new_RNAPs_hooked_id = RNAPs_unhooked_id[np.where(picked_tr==picked_tr_hooked_id)]## ORIGINAL
             ## new_RNAPs_hooked_id = RNAPs_unhooked_id[np.where(picked_tr!=-1)] ##modi possible ?
             
@@ -1034,6 +1034,7 @@ def resume_transcription(INI_file, resume_path, output_dir):
     print("Simulation completed successfully !! \nNumber of transcripts : \n")
     for i, v in enumerate(tr_nbr):
         print("Transcript{} : {}".format(i, v))
+        #ODO : THIS CAN BE COMMENTED LATER ! 
 
     return (GFF_file, TSS_file, TTS_file,
             ITERATIONS_NB, RNAPS_NB,

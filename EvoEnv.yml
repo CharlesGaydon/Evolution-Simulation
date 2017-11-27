@@ -1,7 +1,7 @@
 name: EvoEnv
 dependencies:
   - python=3.5
-  - numpy
+  - numpy=1.11
   - scipy
   - matplotlib
   - pandas
