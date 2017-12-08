@@ -21,7 +21,7 @@ def start_evol_simulation(INI_file) :
     PARAMS['SIM_TIME'] = 50
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  [0.0, 0.0, 1.0]
+    PARAMS['probs'] =  [0.0, 0.0, 1.0, 0.0]
 
     assert(sum(PARAMS['probs'])<=1) 
 
@@ -80,11 +80,11 @@ class plasmid:
                 break
         else:
             return("Simulation time is exceeded so we get out of mutate!")
-        #apply_mut = self.do_my[choice]
-        choice = "Ins"
+        
+        apply_mut = self.do_my[choice]
         print("t = : "+str(self.time)+", Choice = : " +choice)
 
-        apply_mut = self.U_insertion #for testing purpose
+        #apply_mut = self.U_insertion #for testing purpose
         updated_data = apply_mut(self.data)
         utils.save_data_to_path(updated_data,PARAMS["w_path_1"])
         next_fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini",PARAMS["w_path_1"])
@@ -121,15 +121,16 @@ class plasmid:
         
         l = data['GFF']['seq_length'] 
         
-        print
+        updated_data = copy.deepcopy(data)
+        
         
         b1 = np.random.randint(1,l+1)
         b2 = np.random.randint(1,l+1)
         
-        while condition :
+        #while condition :
             
-            b1 = np.random.randint(1,l+1)
-            b2 = np.random.randint(1,l+1)    
+            #b1 = np.random.randint(1,l+1)
+            #b2 = np.random.randint(1,l+1)    
         
         # inverser perfection au passage !
         return(copy.deepcopy(data))
