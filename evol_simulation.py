@@ -21,7 +21,7 @@ def start_evol_simulation(INI_file) :
     PARAMS['SIM_TIME'] = 50
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  [1/3.0,1/3.0,1/4.0]
+    PARAMS['probs'] =  [0.0, 0.0, 1.0]
 
     assert(sum(PARAMS['probs'])<=1) 
 
@@ -120,6 +120,8 @@ class plasmid:
     def U_inversion(self,data):
         
         l = data['GFF']['seq_length'] 
+        
+        print
         
         b1 = np.random.randint(1,l+1)
         b2 = np.random.randint(1,l+1)
