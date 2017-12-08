@@ -17,6 +17,7 @@ def start_evol_simulation(INI_file) :
     #import model parameters from INI_fileparams_evol.init (dont le nom du fichier params.init)
     #note : utiliser syntaxe de simulation.read_config_file(path) ?
     PARAMS['U'] = 150
+    assert PARAMS['U']<1000 #max gene
     PARAMS['SIM_TIME'] = 4
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
@@ -24,7 +25,7 @@ def start_evol_simulation(INI_file) :
     assert(sum(PARAMS['probs'])<=1) 
     PARAMS['probs']+= [1-sum(PARAMS['probs'])] # probability of no event
 
-    PARAMS['w_path_1'] = "tousgenesidentiques/N_1/pIns_0.33/pDel_0.33/pInv_0.33/" #TODO : automatiser
+    PARAMS['w_path_1'] = "tousgenesidentiques/pIns_0.33/pDel_0.33/pInv_0.33/" #TODO : automatiser
     # PARAMS['w_path_2'] = "tousgenesidentiques/N_1/pIns_0.33/pDel_0.33/pInv_0.33/2/"
     PARAMS['perfection'] = pd.read_csv(filepath_or_buffer = PARAMS['path_params_seq']+"environment.dat",
                         sep = '\t',
@@ -56,7 +57,7 @@ class plasmid:
         self.time = 0
         self.do_my = {"Ins":self.U_insertion, "Del": self.U_deletion, "Inv":self.U_inversion} #TODO : add inversion
         self.data = utils.import_data_from_params_seq_file(PARAMS["path_params_seq"]+"params_seq.ini")
-
+        #TODO 
         # copy of files in the working paths
         utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])
         # utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_2"])
@@ -117,31 +118,28 @@ class plasmid:
 
     #TODO
     def U_inversion(self,data):
-        
+        # inverser perfection au passage !
         return(copy.deepcopy(data))
         
     def U_deletion(self,data) :
         
         l = data['GFF']['seq_length']     
         #localisation
-        start=np.random.randint(1,l+1)
-        stop = start+PARAMS['U']-1
+        start=np.random.randint(1,l+1-PARAMS['U'])
+        stop = start+PARAMS['U']-1 #OKKKK : hyp que premiere base est premier gene.
+        #sinon relancer
         #probleme si U est plus grand qu'un gene ! A corriger ! peut etre en amont lors de l'importation...
         
     
-        # Why (x + l) %l  ??
-        #while ( (sum( (l - data['TSS']['TSS_pos'] + start) % l < abs( data['TTS']['TTS_pos'] - data['TSS']['TSS_pos'] ) ) )     | 
-                #(sum( (l + data['TTS']['TTS_pos'] - stop)  % l < abs( data['TTS']['TTS_pos'] - data['TSS']['TSS_pos'] ) ) )      |
-                #(sum( ((l - start + data['TSS']['TSS_pos']) % l >= 0) & ((l - start+data['TTS']['TTS_pos']) % l <= PARAMS['U'] ) ) ) |
-                #(sum( (l - start + data['Prot']['prot_pos']) % l < PARAMS['U'] ) ) ) : #Prot ok)))  
-            
-            #start=np.random.randint(1,l+1)
-            
-            #stop = start+PARAMS['U']-1
+        # while ( (sum( (l - data['TSS']['TSS_pos'] + start) % l < abs( data['TTS']['TTS_pos'] - data['TSS']['TSS_pos'] ) ) )     | 
+                # (sum( (l + data['TTS']['TTS_pos'] - stop)  % l < abs( data['TTS']['TTS_pos'] - data['TSS']['TSS_pos'] ) ) )      |
+        while (sum( ((data['TSS']['TSS_pos'] - start) >= PARAMS['U']))): #Prot ok)))  
+            start=np.random.randint(1,l+1-PARAMS['U'])
+            stop = start+PARAMS['U']-1 
 
-        while sum( ( ( start > data['TSS']['TSS_pos']  ) & ( start  < data['TSS']['TSS_pos'] ) ) |
-                ( ( stop  > data['TSS']['TSS_pos']  ) & ( stop   < data['TSS']['TSS_pos'] ) ) |
-                ( ( data['Prot']['prot_pos'] > data['TSS']['TSS_pos']  ) & ( data['Prot']['prot_pos'] < data['TSS']['TSS_pos'] ) ) ) :
+        # while sum( ( ( start > data['TSS']['TSS_pos']  ) & ( start  < data['TSS']['TSS_pos'] ) ) |
+        #         ( ( stop  > data['TSS']['TSS_pos']  ) & ( stop   < data['TSS']['TSS_pos'] ) ) |
+        #         ( ( data['Prot']['prot_pos'] > data['TSS']['TSS_pos']  ) & ( data['Prot']['prot_pos'] < data['TSS']['TSS_pos'] ) ) ) :
                 
             
             start=np.random.randint(1,l+1)
