@@ -118,7 +118,24 @@ class plasmid:
 
     #TODO
     def U_inversion(self,data):
+<<<<<<< HEAD
+        
+        l = data['GFF']['seq_length'] 
+        
+        b1 = np.random.randint(1,l+1)
+        b2 = np.random.randint(1,l+1)
+        
+        while condition :
+            
+            b1 = np.random.randint(1,l+1)
+            b2 = np.random.randint(1,l+1)    
+        
+            
+        
+        
+=======
         # inverser perfection au passage !
+>>>>>>> 302fb0d954058e76edd2b67c08066e01e8cffe1a
         return(copy.deepcopy(data))
         
     def U_deletion(self,data) :
