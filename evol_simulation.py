@@ -22,18 +22,18 @@ def start_evol_simulation(INI_file) :
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
     PARAMS['probs'] =  [1/3.0,1/3.0,1/4.0]
+
     assert(sum(PARAMS['probs'])<=1) 
-    PARAMS['probs']+= [1-sum(PARAMS['probs'])] # probability of no event
 
     PARAMS['w_path_1'] = "tousgenesidentiques/pIns_0.33/pDel_0.33/pInv_0.33/" #TODO : automatiser
-    # PARAMS['w_path_2'] = "tousgenesidentiques/N_1/pIns_0.33/pDel_0.33/pInv_0.33/2/"
+
     PARAMS['perfection'] = pd.read_csv(filepath_or_buffer = PARAMS['path_params_seq']+"environment.dat",
                         sep = '\t',
                         header=None, 
                         names = ["gene_id","expression"])
 
     os.system("mkdir -p " + PARAMS['w_path_1']) #à adapter et peut etre deplacer dans plasmid.
-    # os.system("mkdir -p " + PARAMS['w_path_2'])
+
 
     Plasmid = plasmid()
     while Plasmid.time<PARAMS['SIM_TIME']:
@@ -99,7 +99,7 @@ class plasmid:
             self.hist_timestamp.append(self.time)
             self.hist_event.append(choice)
             self.hist_fitness.append(self.fitness)
-            
+            ### RAJOUTER UNE DESCRIPTION COMPLETE DU GENOME.
     
     def get_fitness(self,params_file, w_path):
         proportions = simulation.start_transcribing(params_file, w_path)[5] 
