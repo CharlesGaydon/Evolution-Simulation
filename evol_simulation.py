@@ -5,6 +5,13 @@ import copy
 import os
 import simulation
 import utils
+'''
+Authors : Charles GAYDON, Baptiste LAC
+Oct 2017- February 2018
+'''
+
+
+
 PARAMS = {}
 
 """
@@ -16,24 +23,23 @@ def start_evol_simulation(INI_file) :
 
     #import model parameters from INI_fileparams_evol.init (dont le nom du fichier params.init)
     #note : utiliser syntaxe de simulation.read_config_file(path) ?
+    
+    ## IMPORT PARAMS
     PARAMS['U'] = 150
-    assert PARAMS['U']<1000 #max gene
     PARAMS['SIM_TIME'] = 50
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  [1/3.0,1/3.0,1/4.0]
+    PARAMS['probs'] =  np.array([1/3.0,1/3.0,1/3.0],dtype=float)
 
-    assert(sum(PARAMS['probs'])<=1) 
 
-    PARAMS['w_path_1'] = "tousgenesidentiques/pIns_0.33/pDel_0.33/pInv_0.33/" #TODO : automatiser
-
+    ## FURTHERMORE
+    PARAMS['probs']/=sum(PARAMS['probs'])
+    PARAMS['w_path_1'] = PARAMS['path_params_seq']+ utils.make_w_path(PARAMS['probs'])  
+    os.system("mkdir -p " + PARAMS['w_path_1']) #à adapter et peut etre deplacer dans plasmid.
     PARAMS['perfection'] = pd.read_csv(filepath_or_buffer = PARAMS['path_params_seq']+"environment.dat",
                         sep = '\t',
                         header=None, 
                         names = ["gene_id","expression"])
-
-    os.system("mkdir -p " + PARAMS['w_path_1']) #à adapter et peut etre deplacer dans plasmid.
-
 
     Plasmid = plasmid()
     while Plasmid.time<PARAMS['SIM_TIME']:
@@ -55,36 +61,30 @@ class plasmid:
     def __init__(self, ID = 1):
         self.ID = ID
         self.time = 0
-        self.do_my = {"Ins":self.U_insertion, "Del": self.U_deletion, "Inv":self.U_inversion} #TODO : add inversion
+        self.do_my = {"Ins":self.U_insertion, "Del": self.U_deletion, "Inv":self.U_inversion}
         self.data = utils.import_data_from_params_seq_file(PARAMS["path_params_seq"]+"params_seq.ini")
-        #TODO 
-        # copy of files in the working paths
-        utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])
-        # utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_2"])
-        
+        utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])        
         self.fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini", PARAMS["w_path_1"])
         
         #HISTORY
         self.hist_fitness = [self.fitness]
         self.hist_timestamp = [self.time]
         self.hist_event = ["Beg"]
-                        #    sortie : time event fitness
+        #sortie : time event fitness TODO : rajouter metadonnées (mean distance, etc)
+        #TODO :  Charles to Baptiste : au passage, comme tu auras fais du calcul de distance entre gène, 
+        # est-ce que tu
+        # peux aussi calculer la taille max d'un gène et modifier le 1000 du assert suivant stp ?
 
+        assert PARAMS["U"] < 1000, "Sequence unit 'U' for InDel should be smaller than the smallest gene. "
 
     def mutate(self) : 
         #MUTATION
-        while self.time<=PARAMS["SIM_TIME"] :
-            choice = np.random.choice(["Ins","Del","Inv","No_event"],p = PARAMS["probs"]) 
-            self.time+=1
-            if choice!="No_event":
-                break
-        else:
-            return("Simulation time is exceeded so we get out of mutate!")
-        #apply_mut = self.do_my[choice]
-        choice = "Ins"
+        choice = np.random.choice(["Ins","Del","Inv"],p = PARAMS["probs"]) 
+        self.time+=1
+        apply_mut = self.do_my[choice] 
         print("t = : "+str(self.time)+", Choice = : " +choice)
-
-        apply_mut = self.U_insertion #for testing purpose
+        apply_mut = self.U_deletion #for testing purpose
+        
         updated_data = apply_mut(self.data)
         utils.save_data_to_path(updated_data,PARAMS["w_path_1"])
         next_fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini",PARAMS["w_path_1"])
@@ -109,7 +109,7 @@ class plasmid:
         return(np.sum(diff))
         
     def keep_mutated(self,next_fitness):
-        print(str(self.fitness)+" versus new : "+str(next_fitness))
+        print(str(round(self.fitness,4))+" versus new : "+str(round(next_fitness,4)))
         if next_fitness>self.fitness:
             return(True)
         else : 
@@ -120,14 +120,16 @@ class plasmid:
     def U_inversion(self,data):
         
         l = data['GFF']['seq_length'] 
-        
+        local_max_iter = 0        
         b1 = np.random.randint(1,l+1)
         b2 = np.random.randint(1,l+1)
         
         while condition :
-            
             b1 = np.random.randint(1,l+1)
             b2 = np.random.randint(1,l+1)    
+            local_max_iter+=1
+            if local_max_iter>50: 
+                sys.exit("A new inversion cannot be done on the genome.")
         
         # inverser perfection au passage !
         return(copy.deepcopy(data))
@@ -137,25 +139,19 @@ class plasmid:
         l = data['GFF']['seq_length']     
         #localisation
         start=np.random.randint(1,l+1-PARAMS['U'])
-        stop = start+PARAMS['U']-1 #OKKKK : hyp que premiere base est premier gene.
-        #sinon relancer
-        #probleme si U est plus grand qu'un gene ! A corriger ! peut etre en amont lors de l'importation...
-        
-    
-        # while ( (sum( (l - data['TSS']['TSS_pos'] + start) % l < abs( data['TTS']['TTS_pos'] - data['TSS']['TSS_pos'] ) ) )     | 
-                # (sum( (l + data['TTS']['TTS_pos'] - stop)  % l < abs( data['TTS']['TTS_pos'] - data['TSS']['TSS_pos'] ) ) )      |
-        while (sum( ((data['TSS']['TSS_pos'] - start) >= PARAMS['U']))): #Prot ok)))  
+        stop = start+PARAMS['U']
+        local_max_iter = 0
+        while sum(abs(data['TSS']['TSS_pos'].values - start) <= PARAMS['U']\
+                | (abs(data['TTS']['TTS_pos'].values - stop) <= PARAMS['U'])
+                | (abs(data['TSS']['TSS_pos'].values - start) + abs(data['TTS']['TTS_pos'].values - stop)\
+                    == data['TTS']['TTS_pos'].values-data['TSS']['TSS_pos'].values)\
+                |  (abs(data['Prot']['prot_pos'].values - start) + abs(data['Prot']['prot_pos'].values - stop)\
+                    == PARAMS['U'] )): 
             start=np.random.randint(1,l+1-PARAMS['U'])
-            stop = start+PARAMS['U']-1 
-
-        # while sum( ( ( start > data['TSS']['TSS_pos']  ) & ( start  < data['TSS']['TSS_pos'] ) ) |
-        #         ( ( stop  > data['TSS']['TSS_pos']  ) & ( stop   < data['TSS']['TSS_pos'] ) ) |
-        #         ( ( data['Prot']['prot_pos'] > data['TSS']['TSS_pos']  ) & ( data['Prot']['prot_pos'] < data['TSS']['TSS_pos'] ) ) ) :
-                
-            
-            start=np.random.randint(1,l+1)
-            
-            stop = start+PARAMS['U']-1
+            stop = start+PARAMS['U']
+            local_max_iter+=1
+            if local_max_iter>50:
+                sys.exit("A new deletion cannot be done on the genome.")
 
         #deletion 
         updated_data = copy.deepcopy(data)
@@ -169,16 +165,21 @@ class plasmid:
         new_header[4] = str(l-PARAMS['U'])
         updated_data['GFF']['seq'].columns = new_header 
         updated_data['GFF']['seq_length']=l-PARAMS['U']
+        
         return(updated_data)
 
     def U_insertion(self,data) : 
         data = self.data
         l = data['GFF']['seq_length']
+        local_max_iter = 0
         #localisation
         start=np.random.randint(1,l+1)
-        while ((sum((l-data['TSS']['TSS_pos']+start)%l<abs(data['TTS']['TTS_pos']-data['TSS']['TSS_pos']))) 
-            | (sum((l-start+data['TTS']['TTS_pos'])%l<abs(data['TTS']['TTS_pos']-data['TSS']['TSS_pos'])))) : 
+        # while sum(((data['TSS']['TSS_pos']<start)*1) *  ((data['TTS']['TTS_pos']>start)*1)):
+        while sum((data['TSS']['TSS_pos'].values<start) &  (data['TTS']['TTS_pos'].values>start)):
             start=np.random.randint(1,l+1)
+            local_max_iter+=1
+            if local_max_iter>50:
+                sys.exit("A new insertion cannot be done on the genome.")
         #insertion 
         updated_data = copy.deepcopy(data)
         updated_data['TTS']['TTS_pos']+= (data['TTS']['TTS_pos']>start)*PARAMS['U']
