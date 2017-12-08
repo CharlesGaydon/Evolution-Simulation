@@ -18,7 +18,7 @@ def start_evol_simulation(INI_file) :
     #note : utiliser syntaxe de simulation.read_config_file(path) ?
     PARAMS['U'] = 150
     assert PARAMS['U']<1000 #max gene
-    PARAMS['SIM_TIME'] = 4
+    PARAMS['SIM_TIME'] = 50
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
     PARAMS['probs'] =  [1/3.0,1/3.0,1/4.0]
@@ -118,7 +118,6 @@ class plasmid:
 
     #TODO
     def U_inversion(self,data):
-<<<<<<< HEAD
         
         l = data['GFF']['seq_length'] 
         
@@ -130,12 +129,7 @@ class plasmid:
             b1 = np.random.randint(1,l+1)
             b2 = np.random.randint(1,l+1)    
         
-            
-        
-        
-=======
         # inverser perfection au passage !
->>>>>>> 302fb0d954058e76edd2b67c08066e01e8cffe1a
         return(copy.deepcopy(data))
         
     def U_deletion(self,data) :
