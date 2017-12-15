@@ -31,7 +31,7 @@ def start_evol_simulation(INI_file) :
     PARAMS['SIM_TIME'] = 50
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  np.array([1/3.0,1/3.0,1/3.0],dtype=float)
+    PARAMS['probs'] =  np.array([1/3.0,1/3.0,1/3.0, 0.0],dtype=float)
     PARAMS["alpha_c"] = 700
     PARAMS['COMPUTE_FITNESS'] = True
 
@@ -92,7 +92,7 @@ class plasmid:
         self.hist_fitness = [self.fitness]
         self.hist_timestamp = [self.time]
         self.hist_event = ["Beg"]
-	self.hist_kept = [False]
+        self.hist_kept = [False]
         self.genes = pd.Series(["g1","g2","g3"])
         #sortie : time event fitness TODO : rajouter metadonnées (mean distance, etc)
         #TODO :  Charles to Baptiste : au passage, comme tu auras fais du calcul de distance entre gène, 
@@ -141,12 +141,12 @@ class plasmid:
         return(round(np.sum(diff),5))
         
     def keep_mutated(self,next_fitness):
-        print(str(round(self.fitness,4))+" versus new : "+str(round(next_fitness,4)))
+        print('\t' + str(round(self.fitness,4))+" versus new : "+str(round(next_fitness,4)))
         if next_fitness>self.fitness:
             return(True)
         else : 
             alpha = math.exp(-PARAMS["alpha_c"]*abs(self.fitness-next_fitness))
-            print(alpha)
+            print('\t%f'%alpha)
             return(np.random.choice([True,False], p = [alpha,1-alpha]))
     def get_plasmid_description(self):
         #idee : 
