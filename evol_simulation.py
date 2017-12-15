@@ -21,7 +21,7 @@ def start_evol_simulation(INI_file) :
     PARAMS['SIM_TIME'] = 10
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  [0.0, 0.0, 1.0, 0.0] # "Ins","Del","Inv","None"
+    PARAMS['probs'] =  [1/3, 1/3, 1/3, 0.0] # "Ins","Del","Inv","None"
     PARAMS['COMPUTE_FITNESS'] = True
 
     assert(sum(PARAMS['probs'])<=1) 
