@@ -113,8 +113,9 @@ class plasmid:
         if next_fitness>self.fitness:
             return(True)
         else : 
-            e = self.fitness-next_fitness
-            return(np.random.choice([True,False],p = [0.2,0.8])) ## TODO : write formula for p !!
+            alpha = self.fitness/next_fitness
+            print(alpha)
+            return(np.random.choice([False,True],p = [alpha,1-alpha])) ## TODO : write formula for p !!
 
     #TODO
     def U_inversion(self,data):
@@ -138,7 +139,7 @@ class plasmid:
         
         l = data['GFF']['seq_length']     
         #localisation
-        start=np.random.randint(1,l+1-PARAMS['U'])
+        start=np.random.randint(0,l-PARAMS['U'])
         stop = start+PARAMS['U']
         local_max_iter = 0
         while sum(abs(data['TSS']['TSS_pos'].values - start) <= PARAMS['U']\
@@ -173,10 +174,10 @@ class plasmid:
         l = data['GFF']['seq_length']
         local_max_iter = 0
         #localisation
-        start=np.random.randint(1,l+1)
+        start=np.random.randint(1,l)
         # while sum(((data['TSS']['TSS_pos']<start)*1) *  ((data['TTS']['TTS_pos']>start)*1)):
         while sum((data['TSS']['TSS_pos'].values<start) &  (data['TTS']['TTS_pos'].values>start)):
-            start=np.random.randint(1,l+1)
+            start=np.random.randint(1,l)
             local_max_iter+=1
             if local_max_iter>50:
                 sys.exit("A new insertion cannot be done on the genome.")
