@@ -87,6 +87,7 @@ class plasmid:
         self.hist_fitness = [self.fitness]
         self.hist_timestamp = [self.time]
         self.hist_event = ["Beg"]
+        self.genes = pd.Series(["g1","g2","g3"])
         #sortie : time event fitness TODO : rajouter metadonnées (mean distance, etc)
         #TODO :  Charles to Baptiste : au passage, comme tu auras fais du calcul de distance entre gène, 
         # est-ce que tu
@@ -119,7 +120,7 @@ class plasmid:
             ### RAJOUTER UNE DESCRIPTION COMPLETE DU GENOME.
     
     def get_fitness(self,params_file, w_path):
-        proportions = simulation.start_transcribing(params_file, w_path)[5] 
+        proportions = simulation.start_transcribing(params_file, w_path)[5]  
         #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
         proportions = proportions/sum(proportions)
         diff = -abs(proportions-PARAMS['perfection']["expression"].values)/len(proportions)
@@ -133,6 +134,12 @@ class plasmid:
             alpha = math.exp(-PARAMS["alpha_c"]*abs(self.fitness-next_fitness))
             print(alpha)
             return(np.random.choice([True,False], p = [alpha,1-alpha]))
+    def get_plasmid_description(self):
+        #idee : 
+        #self.gene = {"g1":[],"g2":[]...}
+        # for g in self.genes.keys()
+        #   self.gene[g].append([les infos.])
+        return(0)
 
     #TODO
     def U_inversion(self,data):
