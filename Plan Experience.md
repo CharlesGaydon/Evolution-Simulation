@@ -20,9 +20,9 @@ Figures :
 
 - Une exploration de l'espace des probabilités retranscrite sur un triangle de mélange en deux dimension par une heatmap. 
 
-
 ### Tousgenesidentiques
 
+#### Plans
 - pIns = 1 : grand potentiel.
 - pDel = 1 : vite limité
 - pInv = 1¨: possibilité
@@ -33,4 +33,9 @@ Figures :
 
 - design d'expérimentation sur un triangle.
 
+#### Variance de la mesure de fitness
 
+Avec quelle précision la simulation nous donne-t-elle la fitness ?
+Sur cent répétitions nous obtenons : sd = 0.000749.
+Ramenée à la valeur initiale de la fitness, de moyenne sur cent répétition  mean = -0.069414, on trouve une erreur d'environ 1.1%. Evidemment, la dispersion des simulation peut être dépendante de la structure du génome, mais en première approximation on la considère comme négligeable face aux variations induites par les mutations.
+L'intervalle de crédibilité autour de chaque valeur mesurée correspond à un écart-type de part et d'autre. Dans le cas où la nouvelle fitness est inférieure à la précédente, si l'écart delta entre elles est inférieur à 2 x sigma, la différence peut être vue comme due à la dispersion car les intervalles se chevauchent. On choisit de faire en sorte que pour un delta = 4 x sigma, 90% des valeurs soient refusées. Cela nous conduit à choisir : p = exp(-720 x delta)

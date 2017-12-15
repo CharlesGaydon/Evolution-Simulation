@@ -37,6 +37,10 @@ def import_data_from_params_seq_file(path):
     data = {'TTS':TTS,'TSS':TSS,'Prot':Prot,'GFF':GFF}
     return(data)
 
+def make_w_path(probs):
+    p = "pIns_" + str(round(probs[0],2))+"/pDel_" +str(round(probs[1],2))+"/pInv_" +str(round(probs[2],2)) +"/"
+    return(p)
+
 def copy_to_working_path(path_params_seq, working_path):
     #modify the config file from path_params_seq and copy it in working_path.
     config = simulation.read_config_file(path_params_seq+"params_seq.ini")

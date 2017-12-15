@@ -5,6 +5,14 @@ import copy
 import os
 import simulation
 import utils
+import math
+'''
+Authors : Charles GAYDON, Baptiste LAC
+Oct 2017- February 2018
+'''
+
+
+
 PARAMS = {}
 
 """
@@ -16,27 +24,43 @@ def start_evol_simulation(INI_file) :
 
     #import model parameters from INI_fileparams_evol.init (dont le nom du fichier params.init)
     #note : utiliser syntaxe de simulation.read_config_file(path) ?
+    
+    ## IMPORT PARAMS
     PARAMS['U'] = 150
     assert PARAMS['U']<1000 #max gene
-    PARAMS['SIM_TIME'] = 10
+    PARAMS['SIM_TIME'] = 50
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  [1/3, 1/3, 1/3, 0.0] # "Ins","Del","Inv","None"
+    PARAMS['probs'] =  np.array([1/3.0,1/3.0,1/3.0],dtype=float)
+    PARAMS["alpha_c"] = 700
     PARAMS['COMPUTE_FITNESS'] = True
 
-    assert(sum(PARAMS['probs'])<=1) 
-
-    PARAMS['w_path_1'] = "tousgenesidentiques/pIns_0.33/pDel_0.33/pInv_0.33/" #TODO : automatiser
-
+    ## FURTHERMORE
+    PARAMS['probs']/=sum(PARAMS['probs'])
+    PARAMS['w_path_1'] = PARAMS['path_params_seq']+ utils.make_w_path(PARAMS['probs'])  
+    os.system("mkdir -p " + PARAMS['w_path_1']) #à adapter et peut etre deplacer dans plasmid.
     PARAMS['perfection'] = pd.read_csv(filepath_or_buffer = PARAMS['path_params_seq']+"environment.dat",
                         sep = '\t',
                         header=None, 
                         names = ["gene_id","expression"])
 
-    os.system("mkdir -p " + PARAMS['w_path_1']) #à adapter et peut etre deplacer dans plasmid.
-
-
+    ## GENERATE PLASMID
     Plasmid = plasmid()
+
+    # if PARAMS['path_params_seq'] == "tousgenesidentiques/":
+    #     fit_std = 0.000758179842093
+    # else : 
+    #     fitness_base = []
+    #     for i in range(10):
+    #         fitness_base.append(Plasmid.get_fitness(PARAMS["w_path_1"]+"params_seq.ini",PARAMS["w_path_1"]))
+    #     print(fitness_base)
+    #     fitness_base = np.array(fitness_base)
+    #     fit_std = np.std(fitness_base)
+    #     fit_mean = np.mean(fitness_base)
+    #     n_rep_1_perc = math.ceil((fit_std/(0.01*fit_mean))**2)
+    #     print(fit_std, fit_mean,n_rep_1_perc)
+
+
     while Plasmid.time<PARAMS['SIM_TIME']:
         Plasmid.mutate()
     Plasmid.save()
@@ -61,20 +85,19 @@ class plasmid:
                         "Inv":self.U_inversion,
                         "None": lambda x : x} #TODO : add inversion
         self.data = utils.import_data_from_params_seq_file(PARAMS["path_params_seq"]+"params_seq.ini")
-        #TODO 
-        # copy of files in the working paths
-        utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])
-        # utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_2"])
-        
+        utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])        
         self.fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini", PARAMS["w_path_1"])
         
         #HISTORY
-        
         self.hist_fitness = [self.fitness]
         self.hist_timestamp = [self.time]
         self.hist_event = ["Beg"]
-        self.hist_kept = [False]
-                        #    sortie : time event fitness
+	self.hist_kept = [False]
+        self.genes = pd.Series(["g1","g2","g3"])
+        #sortie : time event fitness TODO : rajouter metadonnées (mean distance, etc)
+        #TODO :  Charles to Baptiste : au passage, comme tu auras fais du calcul de distance entre gène, 
+        # est-ce que tu
+        # peux aussi calculer la taille max d'un gène et modifier le 1000 du assert suivant stp ?
 
 
     def mutate(self) : 
@@ -111,22 +134,26 @@ class plasmid:
         
     
     def get_fitness(self,params_file, w_path):
-        
-        if not PARAMS['COMPUTE_FITNESS'] : return 0
-        
-        proportions = simulation.start_transcribing(params_file, w_path)[5] 
+        proportions = simulation.start_transcribing(params_file, w_path)[5]  
         #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
         proportions = proportions/sum(proportions)
         diff = -abs(proportions-PARAMS['perfection']["expression"].values)/len(proportions)
-        return(np.sum(diff))
+        return(round(np.sum(diff),5))
         
     def keep_mutated(self,next_fitness):
-        print("\tFitness : %f --> %f"%(self.fitness, next_fitness))
+        print(str(round(self.fitness,4))+" versus new : "+str(round(next_fitness,4)))
         if next_fitness>self.fitness:
             return(True)
         else : 
-            e = self.fitness-next_fitness
-            return(np.random.choice([True,False],p = [0.2,0.8])) ## TODO : write formula for p !!
+            alpha = math.exp(-PARAMS["alpha_c"]*abs(self.fitness-next_fitness))
+            print(alpha)
+            return(np.random.choice([True,False], p = [alpha,1-alpha]))
+    def get_plasmid_description(self):
+        #idee : 
+        #self.gene = {"g1":[],"g2":[]...}
+        # for g in self.genes.keys()
+        #   self.gene[g].append([les infos.])
+        return(0)
 
     def U_inversion(self, data):
         
@@ -254,6 +281,8 @@ class plasmid:
 
         #deletion 
 
+        #deletion 
+        updated_data = copy.deepcopy(data)
         updated_data['TTS']['TTS_pos']-= (data['TTS']['TTS_pos']>stop)*PARAMS['U']
         updated_data['TSS']['TSS_pos']-= (data['TSS']['TSS_pos']>stop)*PARAMS['U']
         updated_data['Prot']['prot_pos'] -= (data['Prot']['prot_pos']>stop)*PARAMS['U']
