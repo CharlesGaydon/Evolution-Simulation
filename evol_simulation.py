@@ -5,6 +5,7 @@ import copy
 import os
 import simulation
 import utils
+import math
 '''
 Authors : Charles GAYDON, Baptiste LAC
 Oct 2017- February 2018
@@ -30,7 +31,7 @@ def start_evol_simulation(INI_file) :
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
     PARAMS['probs'] =  np.array([1/3.0,1/3.0,1/3.0],dtype=float)
-
+    PARAMS["alpha_c"] = 700
 
     ## FURTHERMORE
     PARAMS['probs']/=sum(PARAMS['probs'])
@@ -41,7 +42,23 @@ def start_evol_simulation(INI_file) :
                         header=None, 
                         names = ["gene_id","expression"])
 
+    ## GENERATE PLASMID
     Plasmid = plasmid()
+
+    # if PARAMS['path_params_seq'] == "tousgenesidentiques/":
+    #     fit_std = 0.000758179842093
+    # else : 
+    #     fitness_base = []
+    #     for i in range(10):
+    #         fitness_base.append(Plasmid.get_fitness(PARAMS["w_path_1"]+"params_seq.ini",PARAMS["w_path_1"]))
+    #     print(fitness_base)
+    #     fitness_base = np.array(fitness_base)
+    #     fit_std = np.std(fitness_base)
+    #     fit_mean = np.mean(fitness_base)
+    #     n_rep_1_perc = math.ceil((fit_std/(0.01*fit_mean))**2)
+    #     print(fit_std, fit_mean,n_rep_1_perc)
+
+
     while Plasmid.time<PARAMS['SIM_TIME']:
         Plasmid.mutate()
     Plasmid.save()
@@ -106,16 +123,16 @@ class plasmid:
         #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
         proportions = proportions/sum(proportions)
         diff = -abs(proportions-PARAMS['perfection']["expression"].values)/len(proportions)
-        return(np.sum(diff))
+        return(round(np.sum(diff),5))
         
     def keep_mutated(self,next_fitness):
         print(str(round(self.fitness,4))+" versus new : "+str(round(next_fitness,4)))
         if next_fitness>self.fitness:
             return(True)
         else : 
-            alpha = self.fitness/next_fitness
+            alpha = math.exp(-PARAMS["alpha_c"]*abs(self.fitness-next_fitness))
             print(alpha)
-            return(np.random.choice([False,True],p = [alpha,1-alpha])) ## TODO : write formula for p !!
+            return(np.random.choice([True,False], p = [alpha,1-alpha]))
 
     #TODO
     def U_inversion(self,data):
