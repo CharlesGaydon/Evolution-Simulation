@@ -6,7 +6,7 @@ import configparser
 
 
 def import_GFF(gff_file) :
-    seq = pd.read_csv(gff_file,sep = '\t', comment='#')
+    seq = pd.read_table(gff_file,sep = '\t', comment='#')
     seq_name = seq.columns.values[0]
     seq_length = int(seq.columns.values[4])
     return({'seq':seq,'seq_name':seq_name,'seq_length':seq_length})
