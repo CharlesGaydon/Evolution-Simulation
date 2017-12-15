@@ -17,7 +17,6 @@ Micro :
 - nombre de ++, --, +- (succession de gènes)
 
 Figures :
-
 - Une exploration de l'espace des probabilités retranscrite sur un triangle de mélange en deux dimension par une heatmap. 
 
 
