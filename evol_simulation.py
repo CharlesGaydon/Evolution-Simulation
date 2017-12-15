@@ -123,9 +123,13 @@ class plasmid:
         
         updated_data = copy.deepcopy(data)
         
+        print(updated_data)
         
-        b1 = np.random.randint(1,l+1)
-        b2 = np.random.randint(1,l+1)
+        a = np.random.randint(0,l)
+        b = np.random.randint(0,l)
+        
+        genes_in_the_middle 
+        
         
         #while condition :
             
@@ -139,26 +143,14 @@ class plasmid:
         
         l = data['GFF']['seq_length']     
         #localisation
-        start=np.random.randint(1,l+1-PARAMS['U'])
+        start=np.random.randint(0,l-PARAMS['U'])
         stop = start+PARAMS['U']-1 #OKKKK : hyp que premiere base est premier gene.
         #sinon relancer
         #probleme si U est plus grand qu'un gene ! A corriger ! peut etre en amont lors de l'importation...
         
-    
-        # while ( (sum( (l - data['TSS']['TSS_pos'] + start) % l < abs( data['TTS']['TTS_pos'] - data['TSS']['TSS_pos'] ) ) )     | 
-                # (sum( (l + data['TTS']['TTS_pos'] - stop)  % l < abs( data['TTS']['TTS_pos'] - data['TSS']['TSS_pos'] ) ) )      |
         while (sum( ((data['TSS']['TSS_pos'] - start) >= PARAMS['U']))): #Prot ok)))  
-            start=np.random.randint(1,l+1-PARAMS['U'])
+            start=np.random.randint(0,l-PARAMS['U'])
             stop = start+PARAMS['U']-1 
-
-        # while sum( ( ( start > data['TSS']['TSS_pos']  ) & ( start  < data['TSS']['TSS_pos'] ) ) |
-        #         ( ( stop  > data['TSS']['TSS_pos']  ) & ( stop   < data['TSS']['TSS_pos'] ) ) |
-        #         ( ( data['Prot']['prot_pos'] > data['TSS']['TSS_pos']  ) & ( data['Prot']['prot_pos'] < data['TSS']['TSS_pos'] ) ) ) :
-                
-            
-            start=np.random.randint(1,l+1)
-            
-            stop = start+PARAMS['U']-1
 
         #deletion 
         updated_data = copy.deepcopy(data)
