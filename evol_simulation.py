@@ -27,11 +27,11 @@ def start_evol_simulation(INI_file) :
     
     ## IMPORT PARAMS
     PARAMS['U'] = 150
-    assert PARAMS['U']<1000 #max gene
+    assert PARAMS['U'] < 1000 #max gene
     PARAMS['SIM_TIME'] = 50
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  np.array([1/3.0,1/3.0,1/3.0, 0.0],dtype=float)
+    PARAMS['probs'] =  np.array([0,0,1.0, 0.0],dtype=float)
     PARAMS["alpha_c"] = 700
     PARAMS['COMPUTE_FITNESS'] = True
 
@@ -171,10 +171,19 @@ class plasmid:
         
         (a, b) = (b, a) if  a > b else  (a, b) # reversing if necessary
         
+        pos_plus = data['GFF']['seq']['strand'] == '+'
+        pos_moins = data['GFF']['seq']['strand'] == '-'
+        
+        start = copy.deepcopy(data['GFF']['seq']['start'])
+        stop = copy.deepcopy(data['GFF']['seq']['end'])
+        
+        start.loc[pos_moins] = data['GFF']['seq']['end'].loc[pos_moins]
+        stop.loc[pos_moins] = data['GFF']['seq']['start'].loc[pos_moins]
+        
         while   np.any(
                         np.logical_or(
-                                np.logical_and(a >= data['GFF']['seq']['start'], a <= data['GFF']['seq']['end']),
-                                np.logical_and(b >= data['GFF']['seq']['start'], b <= data['GFF']['seq']['end']))) \
+                                np.logical_and(a >= start, a <= stop),
+                                np.logical_and(b >= start, b <= stop))) \
                 or \
                 np.any(np.logical_or(a == data['Prot']['prot_pos'], b == data['Prot']['prot_pos'])) :
         
@@ -194,8 +203,8 @@ class plasmid:
         genes_oriented_backward = np.logical_and(np.logical_not(data['GFF']['seq']['strand'] == '+'), genes_in_the_middle)
         
 
-        new_genes_start = a + (b - data['GFF']['seq']['end'][genes_in_the_middle]) #stop becomes start
-        new_genes_stop  = a + (b - data['GFF']['seq']['start'][genes_in_the_middle])
+        new_genes_start = a + (b - data['GFF']['seq']['start'][genes_in_the_middle]) #stop becomes start
+        new_genes_stop  = a + (b - data['GFF']['seq']['end'][genes_in_the_middle])
         
         # Proteins inversions
         
@@ -238,7 +247,8 @@ class plasmid:
         
         # Debug section
      
-        #print(data['GFF']['seq'])
+        print(data['GFF']['seq'])
+        print(data['Prot'])
         #print(genes_in_the_middle)
         #print(new_genes_start)
         #print(new_genes_stop)
