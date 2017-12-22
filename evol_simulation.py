@@ -31,13 +31,14 @@ def start_evol_simulation(INI_file) :
     PARAMS['SIM_TIME'] = 50
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  np.array([1/3.0,1/3.0,1/3.0, 0.0],dtype=float)
+    PARAMS['probs'] =  np.array([0.0,0.0,1/3.0],dtype=float)
     PARAMS["alpha_c"] = 700
     PARAMS['COMPUTE_FITNESS'] = True
 
     ## FURTHERMORE
     PARAMS['probs']/=sum(PARAMS['probs'])
     PARAMS['w_path_1'] = PARAMS['path_params_seq']+ utils.make_w_path(PARAMS['probs'])  
+
     os.system("mkdir -p " + PARAMS['w_path_1']) #à adapter et peut etre deplacer dans plasmid.
     PARAMS['perfection'] = pd.read_csv(filepath_or_buffer = PARAMS['path_params_seq']+"environment.dat",
                         sep = '\t',
@@ -84,9 +85,19 @@ class plasmid:
                         "Del": self.U_deletion, 
                         "Inv":self.U_inversion,
                         "None": lambda x : x} #TODO : add inversion
-        self.data = utils.import_data_from_params_seq_file(PARAMS["path_params_seq"]+"params_seq.ini")
-        utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])        
-        self.fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini", PARAMS["w_path_1"])
+        self.data = utils.import_data_from_params_seq_file(PARAMS["path_params_seq"]+"params_seq.ini") #MODIFIED ! 
+        #utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])
+        print(self.data)
+
+        # AUTOMATISER
+        self.data['GFF']['seq']["1"]-=1000
+        self.data['GFF']['seq']["30000"]-=1000
+        self.data['Prot']['prot_pos']= (self.data['Prot']['prot_pos']-1000)%self.data["GFF"]["seq_length"]
+
+        self.data['TTS']["TTS_pos"]-=1000
+        self.data['TSS']["TSS_pos"]-=1000
+
+        self.fitness = self.get_fitness(PARAMS["path_params_seq"]+"params_seq.ini", PARAMS["w_path_1"])
         
         #HISTORY
         self.hist_fitness = [self.fitness]
@@ -105,23 +116,23 @@ class plasmid:
         self.time += 1
 
         #MUTATION
-        choice = np.random.choice(["Ins","Del","Inv","None"],p = PARAMS["probs"]) 
+        choice = np.random.choice(["Ins","Del","Inv"],p = PARAMS["probs"]) 
         
         print("/// T = %d\n\tchoice : %s"%(self.time, choice))
     
         apply_mut = self.do_my[choice]
         updated_data = apply_mut(self.data)
-        utils.save_data_to_path(updated_data,PARAMS["w_path_1"])
 
         #SELECTION
         
         next_fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini",PARAMS["w_path_1"])
         
-        keep_new = self.keep_mutated(next_fitness)
-        
+        #keep_new = self.keep_mutated(next_fitness)
+        keep_new = True
         if keep_new :
             print("\tmutate !")
             #UPDATE BEST
+            utils.save_data_to_path(updated_data,PARAMS["w_path_1"])
             self.data = copy.deepcopy(updated_data)
             self.fitness = next_fitness
             #UPDATE HISTORY
@@ -134,7 +145,7 @@ class plasmid:
         
     
     def get_fitness(self,params_file, w_path):
-        proportions = simulation.start_transcribing(params_file, w_path)[5]  
+        proportions = simulation.start_transcribing_2(params_file,self.data, w_path) 
         #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
         proportions = proportions/sum(proportions)
         diff = -abs(proportions-PARAMS['perfection']["expression"].values)/len(proportions)
@@ -170,11 +181,14 @@ class plasmid:
         b = np.random.randint(0,l)
         
         (a, b) = (b, a) if  a > b else  (a, b) # reversing if necessary
-        
+
+        start = updated_data["GFF"]["seq"].apply(lambda x : min(x["start"],x["end"]),axis=1)
+        end = updated_data["GFF"]["seq"].apply(lambda x : max(x["start"],x["end"]),axis=1)
+        print(start,end)
         while   np.any(
                         np.logical_or(
-                                np.logical_and(a >= data['GFF']['seq']['start'], a <= data['GFF']['seq']['end']),
-                                np.logical_and(b >= data['GFF']['seq']['start'], b <= data['GFF']['seq']['end']))) \
+                                np.logical_and(a >= start, a<=end),
+                                np.logical_and(b >= start, b<=end))) \
                 or \
                 np.any(np.logical_or(a == data['Prot']['prot_pos'], b == data['Prot']['prot_pos'])) :
         
@@ -210,11 +224,11 @@ class plasmid:
         
         updated_data['Prot'].loc[proteins_in_the_middle, 'prot_pos'] = new_proteins_positions
         
-        updated_data['GFF']['seq'].loc[genes_in_the_middle, 'start'] = new_genes_start
-        updated_data['GFF']['seq'].loc[genes_in_the_middle, 'end'] = new_genes_stop
+        updated_data['GFF']['seq'].loc[genes_in_the_middle, 'start'] = new_genes_stop
+        updated_data['GFF']['seq'].loc[genes_in_the_middle, 'end'] = new_genes_start
         
-        updated_data['TSS'].loc[genes_in_the_middle, 'TSS_pos'] = new_genes_start
-        updated_data['TTS'].loc[genes_in_the_middle,'TTS_pos'] = new_genes_stop
+        updated_data['TSS'].loc[genes_in_the_middle, 'TSS_pos'] = new_genes_stop
+        updated_data['TTS'].loc[genes_in_the_middle,'TTS_pos'] = new_genes_start
         
         
         updated_data['GFF']['seq'].loc[genes_oriented_forward, 'strand'] = '-'
