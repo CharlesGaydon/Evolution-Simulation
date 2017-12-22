@@ -127,8 +127,8 @@ class plasmid:
         
         next_fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini",PARAMS["w_path_1"])
         
-        #keep_new = self.keep_mutated(next_fitness)
-        keep_new = True
+        keep_new = self.keep_mutated(next_fitness)
+        
         if keep_new :
             print("\tmutate !")
             #UPDATE BEST
@@ -208,8 +208,8 @@ class plasmid:
         genes_oriented_backward = np.logical_and(np.logical_not(data['GFF']['seq']['strand'] == '+'), genes_in_the_middle)
         
 
-        new_genes_start = a + (b - data['GFF']['seq']['end'][genes_in_the_middle]) #stop becomes start
-        new_genes_stop  = a + (b - data['GFF']['seq']['start'][genes_in_the_middle])
+        new_genes_start = a + (b - data['GFF']['seq']['start'][genes_in_the_middle]) #stop becomes start
+        new_genes_stop  = a + (b - data['GFF']['seq']['end'][genes_in_the_middle])
         
         # Proteins inversions
         
@@ -224,11 +224,11 @@ class plasmid:
         
         updated_data['Prot'].loc[proteins_in_the_middle, 'prot_pos'] = new_proteins_positions
         
-        updated_data['GFF']['seq'].loc[genes_in_the_middle, 'start'] = new_genes_stop
-        updated_data['GFF']['seq'].loc[genes_in_the_middle, 'end'] = new_genes_start
+        updated_data['GFF']['seq'].loc[genes_in_the_middle, 'start'] = new_genes_start
+        updated_data['GFF']['seq'].loc[genes_in_the_middle, 'end'] = new_genes_stop
         
-        updated_data['TSS'].loc[genes_in_the_middle, 'TSS_pos'] = new_genes_stop
-        updated_data['TTS'].loc[genes_in_the_middle,'TTS_pos'] = new_genes_start
+        updated_data['TSS'].loc[genes_in_the_middle, 'TSS_pos'] = new_genes_start
+        updated_data['TTS'].loc[genes_in_the_middle,'TTS_pos'] = new_genes_stop
         
         
         updated_data['GFF']['seq'].loc[genes_oriented_forward, 'strand'] = '-'

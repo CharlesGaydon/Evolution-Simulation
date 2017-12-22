@@ -126,6 +126,11 @@ def get_TU(TUindex_list):
 
 # calculate the initiation rate
 def f_init_rate(tr_prob, sig, sigma_t, epsilon, m):
+    
+    #print('%s'%(tr_prob))
+    #print('%s'%(sigma_t))
+    #print('%s'%(epsilon))
+    
     tr_prob_sig = tr_prob * np.exp((1/(1+np.exp((sig-sigma_t)/epsilon)))*m)
     return tr_prob_sig
 
@@ -142,6 +147,7 @@ def get_tr_info(tss, tts, TU_tts, Kon, Poff):
 
     j = 0 # trancript id indice
     for i in tss.index.values: # All TSSs
+        
         # get the TU of this tss
         TU_id = tss['TUindex'][i]
         # the list of TTS that are in the same TU of this tss_id (i)
@@ -150,10 +156,8 @@ def get_tr_info(tss, tts, TU_tts, Kon, Poff):
         this_TU_tts = TU_tts[TU_id] # pour 0 => [1150, 2350]
         # + or -
         if tss['TUorient'][i] == '+' :
-            # go right
-            # tr_rate ======>  [ 0.1875   0.03125  0.00625  0.025    0.0625   0.25     0.125    0.3125 ]
             k = TU_id # TTS id index : k start from the first position of each TU
-            proba_rest = 1
+            proba_rest = 1.0
             while proba_rest > 0 :
                 if tss['TSS_pos'][i] < tts['TTS_pos'][k]:
                     tr_id.append(j)
@@ -168,15 +172,15 @@ def get_tr_info(tss, tts, TU_tts, Kon, Poff):
                 k += 1
         else:
             # go leftB
-            k = 0 #TU_id #0 #len(this_TU_tts)# TTS id index ### [0 1 2 3 4 5]
-            proba_rest = 1
-            while proba_rest > 0 and k < len(this_TU_tts) : # >= 0 : #
+            k = TU_id #0 #len(this_TU_tts)# TTS id index ### [0 1 2 3 4 5]
+            proba_rest = 1.0
+            while proba_rest > 0 : # and k < 10 : # or k < len(this_TU_tts) : # >= 0 : #
                 if tts['TTS_pos'][k] < tss['TSS_pos'][i] : # and tts['TUindex'][k] == TU_id :
                     tr_id.append(j)
                     tr_strand.append(-1)
                     tr_start.append(tss['TSS_pos'][i])
                     # after getting them, we shall (in every loop) generate a new tr_end
-                    tr_end.append(this_TU_tts[k])
+                    tr_end.append(tts['TTS_pos'][k])
                     # the probability to choose a specific transcript
                     tr_rate.append(Kon[i] * (Poff[k] * proba_rest)) 
                     proba_rest = (1 - Poff[k]) * proba_rest
@@ -446,12 +450,14 @@ def start_transcribing(INI_file, output_dir):
             prob_unhooked_rate = f_prob_unhooked_rate(sum_init_rate, DELTA_T, len(RNAPs_unhooked_id))
             # craete the numpy array
             prob_unhooked_rate = np.full(len(RNAPs_unhooked_id), prob_unhooked_rate)
+
             all_prob = np.concatenate([prob_init_rate, prob_unhooked_rate])
 
             # create the numpy array that will contains [ nTSS , Unhooked RNAPS ]
             tss_and_unhooked_RNAPs = np.concatenate([tss_id, np.full(len(RNAPs_unhooked_id), -1, dtype=int)])
 
             # pick up
+    
             picked_tr = np.random.choice(tss_and_unhooked_RNAPs, len(RNAPs_unhooked_id), replace=False, p=all_prob) #RNAPs_unhooked_id
 
             # This is the KEY !
