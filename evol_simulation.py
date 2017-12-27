@@ -13,58 +13,32 @@ Oct 2017- February 2018
 
 
 
-PARAMS = {}
-
 """
 TODO :
 - parser au debut de start_evol_simulation (lister au passage paramères dans readme.md)
 """
 
-def start_evol_simulation(INI_file) :
-
-    #import model parameters from INI_fileparams_evol.init (dont le nom du fichier params.init)
-    #note : utiliser syntaxe de simulation.read_config_file(path) ?
+def start_evol_simulation(config_path) :
     
-    ## IMPORT PARAMS
-    PARAMS['U'] = 150
-    assert PARAMS['U']<1000 #max gene
-    PARAMS['SIM_TIME'] = 50
-    PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
-    PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  np.array([0.0,0.0,1/3.0],dtype=float)
-    PARAMS["alpha_c"] = 700
-    PARAMS['COMPUTE_FITNESS'] = True
+    # create plasmid with config with config
+    CONFIG = utils.read_config(config_path)
+    Plasmid = plasmid(CONFIG)
 
-    ## FURTHERMORE
-    PARAMS['probs']/=sum(PARAMS['probs'])
-    PARAMS['w_path_1'] = PARAMS['path_params_seq']+ utils.make_w_path(PARAMS['probs'])  
+    Plasmid.mutate()
+    Plasmid.save()
 
-    os.system("mkdir -p " + PARAMS['w_path_1']) #à adapter et peut etre deplacer dans plasmid.
-    PARAMS['perfection'] = pd.read_csv(filepath_or_buffer = PARAMS['path_params_seq']+"environment.dat",
-                        sep = '\t',
-                        header=None, 
-                        names = ["gene_id","expression"])
-
-    ## GENERATE PLASMID
-    Plasmid = plasmid()
-
-    # if PARAMS['path_params_seq'] == "tousgenesidentiques/":
+    # if self['path_params_seq'] == "tousgenesidentiques/":
     #     fit_std = 0.000758179842093
     # else : 
     #     fitness_base = []
     #     for i in range(10):
-    #         fitness_base.append(Plasmid.get_fitness(PARAMS["w_path_1"]+"params_seq.ini",PARAMS["w_path_1"]))
+    #         fitness_base.append(Plasmid.get_fitness(self["w_path_1"]+"params_seq.ini",self["w_path_1"]))
     #     print(fitness_base)
     #     fitness_base = np.array(fitness_base)
     #     fit_std = np.std(fitness_base)
     #     fit_mean = np.mean(fitness_base)
     #     n_rep_1_perc = math.ceil((fit_std/(0.01*fit_mean))**2)
     #     print(fit_std, fit_mean,n_rep_1_perc)
-
-
-    while Plasmid.time<PARAMS['SIM_TIME']:
-        Plasmid.mutate()
-    Plasmid.save()
 
         #lancer la simulation : mutation, (N=1 : création d'un fichier next_params.ini et des fichiers 
         #TTS TSS GFF Prot ... _next correspondant)
@@ -78,18 +52,33 @@ def start_evol_simulation(INI_file) :
 
 class plasmid:
 
-    def __init__(self, ID = 1):
+    def __init__(self, config, ID = 1, history_file = 'history', plasmid_file = 'plasmid'):
+        
+        self.config = config
+        
+        # cheking config
+        assert self['U'] < 1000          #max gene TODO: automatiser
+        assert np.all(self['PROBS'] > 0)
+
+        # creating required attributes
+        self['PROBS'] /= np.sum(self['PROBS'])
+        os.system("mkdir -p " + self['WPATH'])
+        self.target = pd.read_csv(#'tousgenesidentiques/environment.dat',
+                                    self['TARGET_PATH'],
+                                  sep = '\t',
+                                  header = None, 
+                                  names = ["gene_id","expression"])
+        self.data = utils.import_data_from_params_seq_file(self['PARAMS_PATH'])
+        
         self.ID = ID
         self.time = 0
-        self.do_my = {  "Ins":self.U_insertion, 
-                        "Del": self.U_deletion, 
-                        "Inv":self.U_inversion,
-                        "None": lambda x : x} #TODO : add inversion
-        self.data = utils.import_data_from_params_seq_file(PARAMS["path_params_seq"]+"params_seq.ini") #MODIFIED ! 
-        #utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])
-        print(self.data)
+        self['HISTORY_PATH'] = self['WPATH'] + history_file + '.csv'
+        self['PLASMID_PATH'] = self['WPATH'] + plasmid_file + '.csv'
+        self.do_my = {"Ins":self.U_insertion, 
+                      "Del":self.U_deletion, 
+                      "Inv":self.U_inversion } #TODO : add inversion
 
-        # AUTOMATISER
+        # normalizing plamid TODO : AUTOMATISER
         self.data['GFF']['seq']["1"]-=1000
         self.data['GFF']['seq']["30000"]-=1000
         self.data['Prot']['prot_pos']= (self.data['Prot']['prot_pos']-1000)%self.data["GFF"]["seq_length"]
@@ -97,26 +86,41 @@ class plasmid:
         self.data['TTS']["TTS_pos"]-=1000
         self.data['TSS']["TSS_pos"]-=1000
 
-        self.fitness = self.get_fitness(PARAMS["path_params_seq"]+"params_seq.ini", PARAMS["w_path_1"])
+
+        self.fitness = self.get_fitness(self['PARAMS_PATH'],
+                                        self['WPATH'])  
         
-        #HISTORY
+        # setting history attributes
         self.hist_fitness = [self.fitness]
         self.hist_timestamp = [self.time]
         self.hist_event = ["Beg"]
         self.hist_kept = [False]
-        self.genes = pd.Series(["g1","g2","g3"])
+        self.hist_plasmid = []
+        
+        self.update_plasmid_description()  
         #sortie : time event fitness TODO : rajouter metadonnées (mean distance, etc)
         #TODO :  Charles to Baptiste : au passage, comme tu auras fais du calcul de distance entre gène, 
         # est-ce que tu
         # peux aussi calculer la taille max d'un gène et modifier le 1000 du assert suivant stp ?
 
+    def __getitem__(self, key) :
+        
+        return self.config[key]
+        
+    def __setitem__(self, key, value) :
+        
+        self.config[key] = value
+
+    def __contains__(self, key) :
+        
+        return key in self.config
 
     def mutate(self) : 
 
         self.time += 1
 
         #MUTATION
-        choice = np.random.choice(["Ins","Del","Inv"],p = PARAMS["probs"]) 
+        choice = np.random.choice(["Ins","Del","Inv"],p = self.config['PROBS']) 
         
         print("/// T = %d\n\tchoice : %s"%(self.time, choice))
     
@@ -125,14 +129,15 @@ class plasmid:
 
         #SELECTION
         
-        next_fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini",PARAMS["w_path_1"])
+        next_fitness = self.get_fitness(self['PARAMS_PATH'], 
+                                        self['WPATH'])
         
         keep_new = self.keep_mutated(next_fitness)
         
         if keep_new :
             print("\tmutate !")
             #UPDATE BEST
-            utils.save_data_to_path(updated_data,PARAMS["w_path_1"])
+            utils.save_data_to_path(updated_data, self['WPATH'])
             self.data = copy.deepcopy(updated_data)
             self.fitness = next_fitness
             #UPDATE HISTORY
@@ -143,12 +148,14 @@ class plasmid:
         self.hist_kept.append(keep_new)
             ### RAJOUTER UNE DESCRIPTION COMPLETE DU GENOME.
         
+        self.update_plasmid_description()
     
-    def get_fitness(self,params_file, w_path):
+    def get_fitness(self, params_file, w_path) :
+        
         proportions = simulation.start_transcribing_2(params_file,self.data, w_path) 
         #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
         proportions = proportions/sum(proportions)
-        diff = -abs(proportions-PARAMS['perfection']["expression"].values)/len(proportions)
+        diff = -abs(proportions-self.target["expression"].values)/len(proportions)
         return(round(np.sum(diff),5))
         
     def keep_mutated(self,next_fitness):
@@ -156,15 +163,73 @@ class plasmid:
         if next_fitness>self.fitness:
             return(True)
         else : 
-            alpha = math.exp(-PARAMS["alpha_c"]*abs(self.fitness-next_fitness))
+            alpha = math.exp(-self['ALPHA_C']*abs(self.fitness-next_fitness))
             print('\t%f'%alpha)
             return(np.random.choice([True,False], p = [alpha,1-alpha]))
-    def get_plasmid_description(self):
-        #idee : 
-        #self.gene = {"g1":[],"g2":[]...}
-        # for g in self.genes.keys()
-        #   self.gene[g].append([les infos.])
-        return(0)
+    
+    '''
+        Warning : do not use twice in a simulation
+    '''
+    def update_plasmid_description(self):
+        
+        #TUindex	TUorient	TSS_pos	TSS_strength
+        #TUindex	TUorient	TTS_pos	TTS_proba_off
+        #prot_name	prot_pos
+        #time    type    position length    strand
+        
+        tim = self.time
+        typ = 'G'
+        
+        for index in range(len(self.data['TSS'])) :
+            
+            pos = self.data['TSS']['TSS_pos'][index]
+            ori = self.data['TSS']['TUorient'][index]
+            lth = np.abs(self.data['TTS']['TTS_pos'][index] - self.data['TSS']['TSS_pos'][index])
+            
+            ori = (1 if ori == '+' else -1)
+            
+            self.hist_plasmid += ['%d\t%s\t%d\t%d\t%d'%(tim, typ, pos, lth, ori)]
+        
+        typ = 'P'
+        ori = 0
+        lth = 1
+        
+        for index in range(len(self.data['Prot'])) :
+            
+            pos = self.data['Prot']['prot_pos'][index]
+            
+            self.hist_plasmid += ['%d\t%s\t%d\t%d\t%d'%(tim, typ, pos, lth, ori)]
+    
+    
+    def save_plasmid_description(self, location) :
+        
+        # Build string to save
+        res = 'time\ttype\tlocation\tlength\tstrand\n'
+        
+        res = res + '\n'.join(self.hist_plasmid)
+        
+        # Save string
+        with open(location, 'w') as f :
+            
+            f.write(res)
+            
+        print('Plasmid configuration saved to \'%s\''%location)
+        
+        
+    def save_history(self, location) :
+    
+        # Build history data frame
+        self.history = pd.DataFrame(data={  'time' : self.hist_timestamp,
+                                            'event' : self.hist_event, 
+                                            'fitness' : self.hist_fitness,
+                                            'kept' : self.hist_kept})
+        
+        # Save to CSV
+        self.history.to_csv(path_or_buf = location, index = False, sep = '\t',
+                            columns = ['time', 'event', 'kept', 'fitness'])
+    
+        print('Fitness history saved to %s'%location)
+
 
     def U_inversion(self, data):
         
@@ -284,29 +349,29 @@ class plasmid:
         l = data['GFF']['seq_length']     
         
         #localisation
-        start=np.random.randint(0,l-PARAMS['U'])
-        stop = start+PARAMS['U']-1 #OKKKK : hyp que premiere base est premier gene.
+        start=np.random.randint(0,l-self['U'])
+        stop = start+self['U']-1 #OKKKK : hyp que premiere base est premier gene.
         #sinon relancer
         #probleme si U est plus grand qu'un gene ! A corriger ! peut etre en amont lors de l'importation...
         
-        while (sum( ((data['TSS']['TSS_pos'] - start) >= PARAMS['U']))): #Prot ok)))  
-            start=np.random.randint(0,l-PARAMS['U'])
-            stop = start+PARAMS['U']-1 
+        while (sum( ((data['TSS']['TSS_pos'] - start) >= self['U']))): #Prot ok)))  
+            start=np.random.randint(0,l-self['U'])
+            stop = start+self['U']-1 
 
         #deletion 
 
         #deletion 
         updated_data = copy.deepcopy(data)
-        updated_data['TTS']['TTS_pos']-= (data['TTS']['TTS_pos']>stop)*PARAMS['U']
-        updated_data['TSS']['TSS_pos']-= (data['TSS']['TSS_pos']>stop)*PARAMS['U']
-        updated_data['Prot']['prot_pos'] -= (data['Prot']['prot_pos']>stop)*PARAMS['U']
-        updated_data['GFF']['seq']['start'] -= (data['GFF']['seq']['start']>stop)*PARAMS['U']
-        updated_data['GFF']['seq']['end'] -= (data['GFF']['seq']['start']>stop)*PARAMS['U'] #changer si syntaxes bizarres ?
+        updated_data['TTS']['TTS_pos']-= (data['TTS']['TTS_pos']>stop)*self['U']
+        updated_data['TSS']['TSS_pos']-= (data['TSS']['TSS_pos']>stop)*self['U']
+        updated_data['Prot']['prot_pos'] -= (data['Prot']['prot_pos']>stop)*self['U']
+        updated_data['GFF']['seq']['start'] -= (data['GFF']['seq']['start']>stop)*self['U']
+        updated_data['GFF']['seq']['end'] -= (data['GFF']['seq']['start']>stop)*self['U'] #changer si syntaxes bizarres ?
         
         new_header = old_names.values
-        new_header[4] = str(l-PARAMS['U'])
+        new_header[4] = str(l-self['U'])
         
-        updated_data['GFF']['seq_length'] = l-PARAMS['U']
+        updated_data['GFF']['seq_length'] = l-self['U']
         updated_data['GFF']['seq'].columns = new_header
         
         data['GFF']['seq'].columns = new_header
@@ -332,17 +397,17 @@ class plasmid:
             start=np.random.randint(1,l+1)
         #insertion 
 
-        updated_data['TTS']['TTS_pos']+= (data['TTS']['TTS_pos']>start)*PARAMS['U']
-        updated_data['TSS']['TSS_pos']+= (data['TSS']['TSS_pos']>start)*PARAMS['U']
-        updated_data['Prot']['prot_pos'] += (data['Prot']['prot_pos']>start)*PARAMS['U']
+        updated_data['TTS']['TTS_pos']+= (data['TTS']['TTS_pos']>start)*self['U']
+        updated_data['TSS']['TSS_pos']+= (data['TSS']['TSS_pos']>start)*self['U']
+        updated_data['Prot']['prot_pos'] += (data['Prot']['prot_pos']>start)*self['U']
  
-        updated_data['GFF']['seq']['start'] += (data['GFF']['seq']['start']>start)*PARAMS['U']
-        updated_data['GFF']['seq']['end'] += (data['GFF']['seq']['start']>start)*PARAMS['U'] 
+        updated_data['GFF']['seq']['start'] += (data['GFF']['seq']['start']>start)*self['U']
+        updated_data['GFF']['seq']['end'] += (data['GFF']['seq']['start']>start)*self['U'] 
 
         new_header = old_names.values
-        new_header[4] = str(l+PARAMS['U'])
+        new_header[4] = str(l+self['U'])
         
-        updated_data['GFF']['seq_length']+=PARAMS['U']
+        updated_data['GFF']['seq_length']+=self['U']
         
         updated_data['GFF']['seq'].columns = new_header
         data['GFF']['seq'].columns = new_header
@@ -351,20 +416,8 @@ class plasmid:
     
     def save(self) :
         
-        # Save history
-        
-        self.history = pd.DataFrame(data={  'time' : self.hist_timestamp,
-                                            'event' : self.hist_event, 
-                                            'fitness' : self.hist_fitness,
-                                            'kept' : self.hist_kept})
-        
-        path = PARAMS["w_path_1"]+"history.csv"
-        print("Saving evolution history to : "+path)
-        
-        self.history.to_csv(path_or_buf = path, index=False, sep='\t',
-                            columns=['time', 'event', 'kept', 'fitness'])
-    
-        # Save
-    
-        utils.save_data_to_path(self.data, PARAMS["w_path_1"] + '_final')
+        self.save_history(self['HISTORY_PATH'])
+        self.save_plasmid_description(self['PLASMID_PATH'])
+
+
 
