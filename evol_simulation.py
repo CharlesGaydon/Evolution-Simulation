@@ -21,11 +21,12 @@ TODO :
 def start_evol_simulation(config_path) :
     
     # create plasmid with config with config
-    CONFIG = utils.read_config(config_path)
-    Plasmid = plasmid(CONFIG)
+    config = utils.read_config(config_path)
+    
+    p1 = Plasmid(config)
 
-    Plasmid.mutate()
-    Plasmid.save()
+    p1.mutate()
+    p1.save()
 
     # if self['path_params_seq'] == "tousgenesidentiques/":
     #     fit_std = 0.000758179842093
@@ -50,11 +51,12 @@ def start_evol_simulation(config_path) :
         #differencier les logs si N = 1 ou N > 1 
         #ptit plot de l'évolution de la fitness max qui fait plaiz'
 
-class plasmid:
+class Plasmid:
 
-    def __init__(self, config, ID = 1, history_file = 'history', plasmid_file = 'plasmid'):
+    def __init__(self, config, ID = 1):
         
         self.config = config
+        self.CONFIG = utils.parse_config(self.config)
         
         # cheking config
         assert self['U'] < 1000          #max gene TODO: automatiser
@@ -68,12 +70,10 @@ class plasmid:
                                   sep = '\t',
                                   header = None, 
                                   names = ["gene_id","expression"])
-        self.data = utils.import_data_from_params_seq_file(self['PARAMS_PATH'])
+        self.data = utils.read_plasmid_data(self.config)
         
         self.ID = ID
         self.time = 0
-        self['HISTORY_PATH'] = self['WPATH'] + history_file + '.csv'
-        self['PLASMID_PATH'] = self['WPATH'] + plasmid_file + '.csv'
         self.do_my = {"Ins":self.U_insertion, 
                       "Del":self.U_deletion, 
                       "Inv":self.U_inversion } #TODO : add inversion
@@ -86,9 +86,7 @@ class plasmid:
         self.data['TTS']["TTS_pos"]-=1000
         self.data['TSS']["TSS_pos"]-=1000
 
-
-        self.fitness = self.get_fitness(self['PARAMS_PATH'],
-                                        self['WPATH'])  
+        self.fitness = self.get_fitness()  
         
         # setting history attributes
         self.hist_fitness = [self.fitness]
@@ -105,32 +103,31 @@ class plasmid:
 
     def __getitem__(self, key) :
         
-        return self.config[key]
+        return self.CONFIG[key]
         
     def __setitem__(self, key, value) :
         
-        self.config[key] = value
+        self.CONFIG[key] = value
 
     def __contains__(self, key) :
         
-        return key in self.config
+        return key in self.CONFIG
 
     def mutate(self) : 
 
         self.time += 1
 
         #MUTATION
-        choice = np.random.choice(["Ins","Del","Inv"],p = self.config['PROBS']) 
+        choice = np.random.choice(["Ins","Del","Inv"],p = self['PROBS']) 
         
-        print("/// T = %d\n\tchoice : %s"%(self.time, choice))
+        print("T = %d\n\tchoice : %s"%(self.time, choice))
     
         apply_mut = self.do_my[choice]
         updated_data = apply_mut(self.data)
 
         #SELECTION
         
-        next_fitness = self.get_fitness(self['PARAMS_PATH'], 
-                                        self['WPATH'])
+        next_fitness = self.get_fitness()
         
         keep_new = self.keep_mutated(next_fitness)
         
@@ -150,12 +147,15 @@ class plasmid:
         
         self.update_plasmid_description()
     
-    def get_fitness(self, params_file, w_path) :
+    def get_fitness(self) :
         
-        proportions = simulation.start_transcribing_2(params_file,self.data, w_path) 
-        #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
+        proportions = simulation.start_transcribing_2(self.config, self.data) 
         proportions = proportions/sum(proportions)
+        
+        #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
+        
         diff = -abs(proportions-self.target["expression"].values)/len(proportions)
+        
         return(round(np.sum(diff),5))
         
     def keep_mutated(self,next_fitness):
@@ -200,13 +200,14 @@ class plasmid:
             
             self.hist_plasmid += ['%d\t%s\t%d\t%d\t%d'%(tim, typ, pos, lth, ori)]
     
-    
-    def save_plasmid_description(self, location) :
+    def save_plasmid_description(self) :
         
         # Build string to save
         res = 'time\ttype\tlocation\tlength\tstrand\n'
-        
         res = res + '\n'.join(self.hist_plasmid)
+        
+        # saving location
+        location = self['PLASMID_SAVE_PATH']
         
         # Save string
         with open(location, 'w') as f :
@@ -215,21 +216,22 @@ class plasmid:
             
         print('Plasmid configuration saved to \'%s\''%location)
         
-        
-    def save_history(self, location) :
+    def save_history(self) :
     
         # Build history data frame
         self.history = pd.DataFrame(data={  'time' : self.hist_timestamp,
                                             'event' : self.hist_event, 
                                             'fitness' : self.hist_fitness,
                                             'kept' : self.hist_kept})
+    
+        # saving location
+        location = self['HISTORY_SAVE_PATH']
         
         # Save to CSV
         self.history.to_csv(path_or_buf = location, index = False, sep = '\t',
                             columns = ['time', 'event', 'kept', 'fitness'])
     
         print('Fitness history saved to %s'%location)
-
 
     def U_inversion(self, data):
         
@@ -249,7 +251,7 @@ class plasmid:
 
         start = updated_data["GFF"]["seq"].apply(lambda x : min(x["start"],x["end"]),axis=1)
         end = updated_data["GFF"]["seq"].apply(lambda x : max(x["start"],x["end"]),axis=1)
-        print(start,end)
+ 
         while   np.any(
                         np.logical_or(
                                 np.logical_and(a >= start, a<=end),
@@ -416,8 +418,8 @@ class plasmid:
     
     def save(self) :
         
-        self.save_history(self['HISTORY_PATH'])
-        self.save_plasmid_description(self['PLASMID_PATH'])
+        self.save_history()
+        self.save_plasmid_description()
 
-
+        return
 

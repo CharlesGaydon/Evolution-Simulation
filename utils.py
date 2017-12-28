@@ -18,49 +18,72 @@ def load_tab_file(filename):
 
 def read_config(config_path) :
     
-    CONFIG = {}
-
     # Read config 
     
-    config = configparser.ConfigParser()
+    config = configparser.ConfigParser(interpolation = configparser.ExtendedInterpolation())
     # to preserve capital letters
     config.optionxform = str
     config.read(config_path)
 
-    # get inputs infos from the config file
+    return config
+
+def parse_config(config) :
+    
+    CONFIG = {}
+    
     CONFIG['SIM_TIME'] = config.getfloat('INPUTS', 'SIM_TIME')
     CONFIG['POP_SIZE'] = config.getfloat('INPUTS', 'POP_SIZE')
-    CONFIG['INIT_PATH'] = config.get('PATHS', 'INIT_PATH')
+    
+    CONFIG['INI_PATH'] = config.get('PATHS', 'INI_PATH')
+    CONFIG['SIM_PATH'] = config.get('PATHS', 'SIM_PATH')
+    CONFIG['ENV_PATH'] = config.get('PATHS', 'ENV_PATH')
+    CONFIG['PAR_PATH'] = config.get('PATHS', 'PAR_PATH')
+    
+    CONFIG['PLASMID_PATH'] = config.get('PATHS', 'PLASMID_PATH')
     CONFIG['TARGET_PATH'] = config.get('PATHS', 'TARGET_PATH')
-    CONFIG['SAVE_PATH'] = config.get('PATHS', 'SAVE_PATH')
     CONFIG['PARAMS_PATH'] = config.get('PATHS', 'PARAMS_PATH')
+    
+    CONFIG['GFF_FILE'] = config.get('PATHS', 'GFF_FILE')
+    CONFIG['TSS_FILE'] = config.get('PATHS', 'TSS_FILE')
+    CONFIG['TTS_FILE'] = config.get('PATHS', 'TTS_FILE')
+    CONFIG['PROT_FILE'] = config.get('PATHS', 'PROT_FILE')
+    
+    
+    CONFIG['HISTORY_SAVE_NAME'] = config.get('PATHS', 'HISTORY_SAVE_NAME')
+    CONFIG['PLASMID_SAVE_NAME'] = config.get('PATHS', 'PLASMID_SAVE_NAME')
+    
     CONFIG['PINV'] = config.getfloat('SIMULATION', 'PINV')
     CONFIG['PDEL'] = config.getfloat('SIMULATION', 'PDEL')
     CONFIG['PINS'] = config.getfloat('SIMULATION', 'PINS')
     CONFIG['U'] = config.getfloat('SIMULATION', 'UNIT')
-    CONFIG['ALPHA_C'] = config.getfloat('SIMULATION', 'ALPHA_C')
+    CONFIG['ALPHA_C'] = config.getint('SIMULATION', 'ALPHA_C')
+    
+    CONFIG['STEPS_DONE'] = config.getint('STATE', 'STEPS_DONE')
+
+    # ---
+    
     CONFIG['PROBS'] = np.array([CONFIG['PDEL'],
                                 CONFIG['PINS'],
                                 CONFIG['PINV']], 
                                 dtype=float)
-    CONFIG['WPATH'] = CONFIG['SAVE_PATH'] + get_working_path(CONFIG) + '/'
+                                
+    CONFIG['WPATH'] = CONFIG['SIM_PATH'] + get_working_path(CONFIG) + '/'
+    CONFIG['HISTORY_SAVE_PATH'] = CONFIG['WPATH'] + CONFIG['HISTORY_SAVE_NAME']
+    CONFIG['PLASMID_SAVE_PATH'] = CONFIG['WPATH'] + CONFIG['PLASMID_SAVE_NAME']
 
     return CONFIG
 
 # based on simulation.read_config_file_v2
 # parse the params.ini file and returns a data object
 # for future mnipulation/mutation. 
-def import_data_from_params_seq_file(path):
-
-    config = configparser.ConfigParser()
-    # to preserve capital letters
-    config.optionxform = str
-    config.read(path)
+def read_plasmid_data(config):
+    
     # get inputs infos from the config file
-    GFF_file = config.get('INPUTS', 'GFF')
-    TSS_file = config.get('INPUTS', 'TSS')
-    TTS_file = config.get('INPUTS', 'TTS')
-    Prot_file = config.get('INPUTS', 'BARR_FIX')
+    GFF_file = config.get('PATHS', 'GFF_FILE')
+    TSS_file = config.get('PATHS', 'TSS_FILE')
+    TTS_file = config.get('PATHS', 'TTS_FILE')
+    Prot_file = config.get('PATHS', 'PROT_FILE')
+    
     TTS = load_tab_file(TTS_file)
     TSS = load_tab_file(TSS_file)
     Prot = load_tab_file(Prot_file)

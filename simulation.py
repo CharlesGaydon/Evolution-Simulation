@@ -661,21 +661,12 @@ def start_transcribing(INI_file, output_dir):
             cov_bp, tr_end)
 
 
-def start_transcribing_2(INI_file, data, output_dir):
+def start_transcribing_2(config, data):
 
-    ####################### Params info ###################
-    config = read_config_file(INI_file)
-
-    # get inputs infos from the config file
-    # GFF_file = config.get('INPUTS', 'GFF')
-    # TSS_file = config.get('INPUTS', 'TSS')
-    # TTS_file = config.get('INPUTS', 'TTS')
-    # Prot_file = config.get('INPUTS', 'BARR_FIX')    
-
-    # get values from the config file
-    m = config.getfloat('GLOBAL', 'm')
-    sigma_t = config.getfloat('GLOBAL', 'sigma_t')
-    epsilon = config.getfloat('GLOBAL', 'epsilon')
+    # get values from the config file TODO : change this to avoid reading
+    m = config.getfloat('SIMULATION', 'm')
+    sigma_t = config.getfloat('SIMULATION', 'sigma_t')
+    epsilon = config.getfloat('SIMULATION', 'epsilon')
 
     SIGMA_0 = config.getfloat('SIMULATION', 'SIGMA_0')
     DELTA_X = config.getfloat('SIMULATION', 'DELTA_X')
@@ -693,20 +684,7 @@ def start_transcribing_2(INI_file, data, output_dir):
     x0_GYRASE = config.getfloat('SIMULATION', 'x0_GYRASE')
     k_TOPO = config.getfloat('SIMULATION', 'k_TOPO')
     x0_TOPO = config.getfloat('SIMULATION', 'x0_TOPO')
-    #SIGMA_0 = 0 #((-np.log(((GYRASE_CONC*GYRASE_CTE)/TOPO_CONC*TOPO_CTE)-1))/k)+x_0
-    #$print("SIGMA_0 --> ", SIGMA_0)
-
-    # define the output directory
-    # os.makedirs(output_dir, exist_ok=True)
-    
-    # path to the input files (remove the "params.ini" from the path)
-    # pth = '/'.join(INI_file.split('/')[:-1])+'/'    # EDITED : should work for every kind of ini Now!
-                     
-    # gff_df_raw = load_gff(GFF_file) # pth+ removed for all 4 import ! 
-    # tss = load_tab_file(TSS_file) 
-    # tts = load_tab_file(TTS_file)
-    # prot = load_tab_file(Prot_file)
-
+   
     # TSS_pos
     TSS_pos = (data["TSS"]['TSS_pos'].values/DELTA_X).astype(int)
     
@@ -734,9 +712,7 @@ def start_transcribing_2(INI_file, data, output_dir):
 
     # Strands orientation
     strands = data["TSS"]["TUorient"].values
-    print("Orientation")
-    print(strands)
-
+    
     # list of all possible transcripts
     tr_id, tr_strand, tr_start, tr_end, tr_rate, tr_size, ts_beg_all_trs, ts_remain_all = get_tr_info(data["TSS"], data["TTS"], TU_tts, Kon, Poff)
 
@@ -1050,15 +1026,7 @@ def start_transcribing_2(INI_file, data, output_dir):
     #save_files(output_dir, Barr_pos, Barr_type, Dom_size, Barr_ts_remain, Barr_sigma, tr_nbr, tr_times, save_RNAPs_info, save_tr_info, save_Barr_sigma, save_Dom_size, save_mean_sig_wholeGenome, DELTA_X, RNAPs_genSC, RNAPs_tr, RNAPs_pos, RNAPs_unhooked_id, init_rate, Kon, RNAPS_NB, SIGMA_0, GYRASE_CONC, TOPO_CONC)
 
     print("\tSimulation completed successfully !!")#\n\tNumber of transcripts : \n")
-    #for i, v in enumerate(tr_nbr):
-        #print("\tTranscript{} : {}".format(i, v))
 
-    # return (GFF_file, TSS_file, TTS_file,
-    #         ITERATIONS_NB, RNAPS_NB,
-    #         tr_nbr, tr_times, init_rate, 
-    #         RNAPs_tr, RNAPs_pos, RNAPs_unhooked_id,
-    #         save_RNAPs_info, save_tr_info, save_Barr_sigma, save_Dom_size,
-    #         cov_bp, tr_end)
     return(tr_nbr)
 
 
