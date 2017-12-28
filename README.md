@@ -29,19 +29,17 @@ This code is designed for Linux.
 
 1. First, install a conda env containing the dependencies
 
-	`conda env create --file EvoEnv.yml`
-
+  `conda env create --file EvoEnv.yml`
 
 2. Then, activate the EvoEnv environment
 
-	`source activate EvoEnv`
+  `source activate EvoEnv`
 
-3. Run a simulation:
+3. Run a simulation
 
   `python start_evol_simulation.py paramsfiles/params_evo.ini`
 
 #### Coding Conventions
 
-indent = 4 spaces
-
-Python version > 3.x
+* indent = 4 spaces
+* Python version > 3.x
