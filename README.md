@@ -58,7 +58,7 @@ This code is designed for Linux.
 
 5. Enjoy the result
 
-![a fitness graph](https://github.com/CharlesGaydon/Evolution-Simulation/blob/master/display/example_1.pdf)
+![a fitness graph](https://github.com/CharlesGaydon/Evolution-Simulation/blob/master/display/example_graph.png)
 
 #### Coding Conventions
 
