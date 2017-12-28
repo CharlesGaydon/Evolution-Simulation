@@ -36,12 +36,31 @@ This code is designed for Linux.
 
 	`source activate EvoEnv`
 
-3. Run a simulation:
+3. Run a simulation
+	
+	`python start_evol_simulation.py paramsfiles/params_evo.ini`
 
-  `python start_evol_simulation.py paramsfiles/params_evo.ini`
+### Fitness graphs
+
+1. Install dependencies in R
+
+	`install.packages(ggplot2)`
+
+2. Set-up the correct working directory
+
+	`setwd("your_path")`
+
+3. Copy a `history.csv` file next to `display/graphs.r`
+
+4. Run the script 
+
+	`Rscript graphs.r`
+
+5. Enjoy the result
+
+![a fitness graph](https://github.com/CharlesGaydon/Evolution-Simulation/blob/master/display/example_1.pdf)
 
 #### Coding Conventions
 
-indent = 4 spaces
-
-Python version > 3.x
+- indent = 4 spaces
+- Python version > 3.x
