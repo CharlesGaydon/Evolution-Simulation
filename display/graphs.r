@@ -1,6 +1,6 @@
 rm(list=ls())
 library('ggplot2')
-setwd("~/Documents/INSA/BC/Projet/Evolution-Simulation")
+#setwd("~/Documents/INSA/BC/Projet/Evolution-Simulation")
 
 D = read.table('history.csv', sep='\t', header=T)
 
@@ -30,5 +30,6 @@ plotA = ggplot() +
   ggtitle('Fitness evolution and events') + 
   theme(plot.title = element_text(lineheight=1, face="bold"))
 
+pdf('graph.pdf', width=10, height=6)
 plotA
-
+dev.off()

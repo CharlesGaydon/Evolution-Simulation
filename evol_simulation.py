@@ -6,50 +6,31 @@ import os
 import simulation
 import utils
 import math
+
 '''
 Authors : Charles GAYDON, Baptiste LAC
 Oct 2017- February 2018
 '''
 
-
-
-"""
-TODO :
-- parser au debut de start_evol_simulation (lister au passage paramères dans readme.md)
-"""
-
 def start_evol_simulation(config_path) :
     
-    # create plasmid with config with config
+    # create plasmid with config
     config = utils.read_config(config_path)
     
     p1 = Plasmid(config)
 
-    p1.mutate()
+    p1.mutate(20)
     p1.save()
-
-    # if self['path_params_seq'] == "tousgenesidentiques/":
-    #     fit_std = 0.000758179842093
-    # else : 
-    #     fitness_base = []
-    #     for i in range(10):
-    #         fitness_base.append(Plasmid.get_fitness(self["w_path_1"]+"params_seq.ini",self["w_path_1"]))
-    #     print(fitness_base)
-    #     fitness_base = np.array(fitness_base)
-    #     fit_std = np.std(fitness_base)
-    #     fit_mean = np.mean(fitness_base)
-    #     n_rep_1_perc = math.ceil((fit_std/(0.01*fit_mean))**2)
-    #     print(fit_std, fit_mean,n_rep_1_perc)
-
-        #lancer la simulation : mutation, (N=1 : création d'un fichier next_params.ini et des fichiers 
-        #TTS TSS GFF Prot ... _next correspondant)
-        #N!=1 : actualisation des fichiers de donné.
-        # le calcul de la fitness sur params_next, sa comparaison,  au sein d'un individu. 
-        #Note : faire le tri dans les outputs enregistrés de simulation.py
-        #actualiser ensuite les individus (si un seul individu inclure Metropolis dans l'individu.)
-        #si plusieurs individus, reprod sexuelle impossible... duplication simple ?
-        #differencier les logs si N = 1 ou N > 1 
-        #ptit plot de l'évolution de la fitness max qui fait plaiz'
+   
+    #lancer la simulation : mutation, (N=1 : création d'un fichier next_params.ini et des fichiers 
+    #TTS TSS GFF Prot ... _next correspondant)
+    #N!=1 : actualisation des fichiers de donné.
+    # le calcul de la fitness sur params_next, sa comparaison,  au sein d'un individu. 
+    #Note : faire le tri dans les outputs enregistrés de simulation.py
+    #actualiser ensuite les individus (si un seul individu inclure Metropolis dans l'individu.)
+    #si plusieurs individus, reprod sexuelle impossible... duplication simple ?
+    #differencier les logs si N = 1 ou N > 1 
+    #ptit plot de l'évolution de la fitness max qui fait plaiz'
 
 class Plasmid:
 
@@ -58,44 +39,86 @@ class Plasmid:
         self.config = config
         self.CONFIG = utils.parse_config(self.config)
         
-        # cheking config
-        assert self['U'] < 1000          #max gene TODO: automatiser
-        assert np.all(self['PROBS'] > 0)
-
+        # Some information
+        
+        print('Plasmid     | %s'%self['PLASMID_PATH'])
+        print('Environment | %s'%self['TARGET_PATH'])
+        print('Parameters  | %s'%self['CONFIG_NAME'])
+        
         # creating required attributes
         self['PROBS'] /= np.sum(self['PROBS'])
-        os.system("mkdir -p " + self['WPATH'])
-        self.target = pd.read_csv(#'tousgenesidentiques/environment.dat',
-                                    self['TARGET_PATH'],
+        
+        os.system('mkdir -p ' + self['WPATH'])
+        
+        self.target = pd.read_csv(self['TARGET_PATH'],
                                   sep = '\t',
                                   header = None, 
-                                  names = ["gene_id","expression"])
+                                  names = ['gene_id','expression'])
+                                  
         self.data = utils.read_plasmid_data(self.config)
+        utils.save_data(self.data, self.CONFIG)
         
         self.ID = ID
         self.time = 0
-        self.do_my = {"Ins":self.U_insertion, 
-                      "Del":self.U_deletion, 
-                      "Inv":self.U_inversion } #TODO : add inversion
+        self.do_my = {'Ins':self.U_insertion, 
+                      'Del':self.U_deletion, 
+                      'Inv':self.U_inversion } #TODO : add inversion
 
-        # normalizing plamid TODO : AUTOMATISER
-        self.data['GFF']['seq']["1"]-=1000
-        self.data['GFF']['seq']["30000"]-=1000
-        self.data['Prot']['prot_pos']= (self.data['Prot']['prot_pos']-1000)%self.data["GFF"]["seq_length"]
+        # normalizing plamid
+        
+        offset = self.data['TSS']['TSS_pos'][0] - 1
+         
+        self.data['GFF']['seq']['start'] -= offset
+        self.data['GFF']['seq']['end'] -= offset
+        self.data['Prot']['prot_pos'] = (self.data['Prot']['prot_pos']-offset)%self.data['GFF']['seq_length']
 
-        self.data['TTS']["TTS_pos"]-=1000
-        self.data['TSS']["TSS_pos"]-=1000
+        self.data['TTS']['TTS_pos'] -= offset
+        self.data['TSS']['TSS_pos'] -= offset
 
         self.fitness = self.get_fitness()  
         
         # setting history attributes
-        self.hist_fitness = [self.fitness]
-        self.hist_timestamp = [self.time]
-        self.hist_event = ["Beg"]
-        self.hist_kept = [False]
-        self.hist_plasmid = []
+        self.history = {}
+       
+        self.history['fitness'] = [self.fitness]
+        self.history['time'] = [self.time]
+        self.history['event'] = ['Beg']
+        self.history['kept'] = [False]
+        self.history['plasmid'] = []
+        
+        plasmid_size = self.data['GFF']['seq_length']
+
+        gene_ratio = np.sum(np.abs(self.data['TTS']['TTS_pos'] - \
+                            self.data['TSS']['TSS_pos']))/plasmid_size
+            
+        UD_ratio = np.sum(self.data['TSS']['TUorient'] == '+') / \
+                   np.sum(self.data['TSS']['TUorient'] == '-') if \
+                   np.sum(self.data['TSS']['TUorient'] == '-') != 0 else \
+                   -1
+        
+        starts = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1)
+        stops  = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1)
+        mean_space = np.mean(np.abs(stops-starts))
+
+        self.history['plasmid_size'] = [plasmid_size]
+        self.history['gene_ratio'] = [gene_ratio]
+        self.history['up_down_ratio'] = [UD_ratio]
+        self.history['mean_space'] = [mean_space]
+        
         
         self.update_plasmid_description()  
+        
+        # cheking config
+     
+        min_gene_size = np.min(self.data['TTS']['TTS_pos']-self.data['TSS']['TSS_pos'])
+        
+        assert self['U'] < min_gene_size
+        assert np.all(self['PROBS'] > 0)
+        assert np.sum(self['PROBS']) == 1
+        assert np.all(self.data['TSS']['TSS_pos'][0] > 0)
+        assert np.all(self.data['TTS']['TTS_pos'][0] > 0)
+        assert self.data['TSS']['TSS_pos'][0] == 1
+        
         #sortie : time event fitness TODO : rajouter metadonnées (mean distance, etc)
         #TODO :  Charles to Baptiste : au passage, comme tu auras fais du calcul de distance entre gène, 
         # est-ce que tu
@@ -113,39 +136,66 @@ class Plasmid:
         
         return key in self.CONFIG
 
-    def mutate(self) : 
+    def mutate(self, rep = 1) : 
 
-        self.time += 1
-
-        #MUTATION
-        choice = np.random.choice(["Ins","Del","Inv"],p = self['PROBS']) 
-        
-        print("T = %d\n\tchoice : %s"%(self.time, choice))
+        rep = self.CONFIG['SIM_TIME'] if rep <= 0 else rep
     
-        apply_mut = self.do_my[choice]
-        updated_data = apply_mut(self.data)
+        for i in range(rep) :
+            
+            print('-'*50)
+        
+            self.time += 1
 
-        #SELECTION
+            #MUTATION
+            choice = np.random.choice(['Ins','Del','Inv'], p = self['PROBS']) 
+            
+            print('T = %d\n\tOperation:\t%s'%(self.time, choice))
         
-        next_fitness = self.get_fitness()
-        
-        keep_new = self.keep_mutated(next_fitness)
-        
-        if keep_new :
-            print("\tmutate !")
-            #UPDATE BEST
-            utils.save_data_to_path(updated_data, self['WPATH'])
-            self.data = copy.deepcopy(updated_data)
-            self.fitness = next_fitness
-            #UPDATE HISTORY
-        
-        self.hist_timestamp.append(self.time)
-        self.hist_event.append(choice)
-        self.hist_fitness.append(self.fitness)
-        self.hist_kept.append(keep_new)
+            apply_mut = self.do_my[choice]
+            updated_data = apply_mut(self.data)
+
+            #SELECTION
+            
+            next_fitness = self.get_fitness()
+            
+            keep_new = self.keep_mutated(next_fitness)
+            
+            if keep_new :
+                print('\tPlasmid kept')
+                #UPDATE BEST
+                utils.save_data(updated_data, self.CONFIG)
+                self.data = copy.deepcopy(updated_data)
+                self.fitness = next_fitness
+                #UPDATE HISTORY
+            
+            self.history['time'].append(self.time)
+            self.history['event'].append(choice)
+            self.history['fitness'].append(self.fitness)
+            self.history['kept'].append(keep_new)
+            
+            plasmid_size = self.data['GFF']['seq_length']
+            self.history['plasmid_size'].append(plasmid_size)
+            
+            gene_ratio = np.sum(np.abs(self.data['TTS']['TTS_pos'] - \
+                                self.data['TSS']['TSS_pos']))/plasmid_size
+            self.history['gene_ratio'].append(gene_ratio)
+            
+            UD_ratio = np.sum(self.data['TSS']['TUorient'] == '+') / \
+                       np.sum(self.data['TSS']['TUorient'] == '-') if \
+                       np.sum(self.data['TSS']['TUorient'] == '-') != 0 else \
+                       -1
+                       
+            self.history['up_down_ratio'].append(UD_ratio)
+            
+            starts = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1)
+            stops  = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1)
+            mean_space = np.mean(np.abs(stops-starts))
+            
+            self.history['mean_space'].append(mean_space)
+            
             ### RAJOUTER UNE DESCRIPTION COMPLETE DU GENOME.
-        
-        self.update_plasmid_description()
+            
+            self.update_plasmid_description()
     
     def get_fitness(self) :
         
@@ -154,22 +204,19 @@ class Plasmid:
         
         #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
         
-        diff = -abs(proportions-self.target["expression"].values)/len(proportions)
+        diff = -abs(proportions-self.target['expression'].values)/len(proportions)
         
         return(round(np.sum(diff),5))
-        
+
     def keep_mutated(self,next_fitness):
-        print('\t' + str(round(self.fitness,4))+" versus new : "+str(round(next_fitness,4)))
+        print('\tFitness:\t%f -> %f'%(round(self.fitness,4), round(next_fitness,4)))
         if next_fitness>self.fitness:
             return(True)
         else : 
             alpha = math.exp(-self['ALPHA_C']*abs(self.fitness-next_fitness))
-            print('\t%f'%alpha)
+            print('\tAlpha:    \t%f'%alpha)
             return(np.random.choice([True,False], p = [alpha,1-alpha]))
     
-    '''
-        Warning : do not use twice in a simulation
-    '''
     def update_plasmid_description(self):
         
         #TUindex	TUorient	TSS_pos	TSS_strength
@@ -188,7 +235,7 @@ class Plasmid:
             
             ori = (1 if ori == '+' else -1)
             
-            self.hist_plasmid += ['%d\t%s\t%d\t%d\t%d'%(tim, typ, pos, lth, ori)]
+            self.history['plasmid'] += ['%d\t%s\t%d\t%d\t%d'%(tim, typ, pos, lth, ori)]
         
         typ = 'P'
         ori = 0
@@ -198,13 +245,13 @@ class Plasmid:
             
             pos = self.data['Prot']['prot_pos'][index]
             
-            self.hist_plasmid += ['%d\t%s\t%d\t%d\t%d'%(tim, typ, pos, lth, ori)]
+            self.history['plasmid'] += ['%d\t%s\t%d\t%d\t%d'%(tim, typ, pos, lth, ori)]
     
     def save_plasmid_description(self) :
         
         # Build string to save
         res = 'time\ttype\tlocation\tlength\tstrand\n'
-        res = res + '\n'.join(self.hist_plasmid)
+        res = res + '\n'.join(self.history['plasmid'])
         
         # saving location
         location = self['PLASMID_SAVE_PATH']
@@ -213,34 +260,28 @@ class Plasmid:
         with open(location, 'w') as f :
             
             f.write(res)
-            
-        print('Plasmid configuration saved to \'%s\''%location)
-        
+
+        print('Plasmid configuration saved to\t%s'%location)
+
     def save_history(self) :
     
         # Build history data frame
-        self.history = pd.DataFrame(data={  'time' : self.hist_timestamp,
-                                            'event' : self.hist_event, 
-                                            'fitness' : self.hist_fitness,
-                                            'kept' : self.hist_kept})
+        
+        subdict = { key : self.history[key] for key in self.history if key != 'plasmid' }
+        
+        df = pd.DataFrame(data = subdict)
     
         # saving location
         location = self['HISTORY_SAVE_PATH']
         
         # Save to CSV
-        self.history.to_csv(path_or_buf = location, index = False, sep = '\t',
-                            columns = ['time', 'event', 'kept', 'fitness'])
+        df.to_csv(path_or_buf = location, index = False, sep = '\t')
     
-        print('Fitness history saved to %s'%location)
+        print('Fitness history saved to\t%s'%location)
 
     def U_inversion(self, data):
         
         updated_data = copy.deepcopy(data)
-    
-        names=["seqid", "source", "type","start","end","score","strand","phase","attributes"]
-        old_names = updated_data['GFF']['seq'].columns
-        updated_data['GFF']['seq'].columns = names
-        data['GFF']['seq'].columns = names
         
         l = data['GFF']['seq_length']     
         
@@ -249,8 +290,8 @@ class Plasmid:
         
         (a, b) = (b, a) if  a > b else  (a, b) # reversing if necessary
 
-        start = updated_data["GFF"]["seq"].apply(lambda x : min(x["start"],x["end"]),axis=1)
-        end = updated_data["GFF"]["seq"].apply(lambda x : max(x["start"],x["end"]),axis=1)
+        start = updated_data['GFF']['seq'].apply(lambda x : min(x['start'],x['end']),axis=1)
+        end = updated_data['GFF']['seq'].apply(lambda x : max(x['start'],x['end']),axis=1)
  
         while   np.any(
                         np.logical_or(
@@ -314,9 +355,6 @@ class Plasmid:
         #updated_data['TTS'].sort_values(by='TTS_pos', inplace=True)
         #updated_data['Prot'].sort_values(by='prot_pos', inplace=True)
     
-        updated_data['GFF']['seq'].columns = old_names
-        data['GFF']['seq'].columns = old_names
-        
         # Debug section
      
         #print(data['GFF']['seq'])
@@ -337,17 +375,11 @@ class Plasmid:
         #print(updated_data['Prot'])
         
         return(updated_data)
-        
-    def U_deletion(self,data) :
+
+    def U_deletion(self, data) :
         
         updated_data = copy.deepcopy(data)
-        
-        names = ["seqid", "source", "type","start","end","score","strand","phase","attributes"]
-        old_names = data['GFF']['seq'].columns
-        
-        updated_data['GFF']['seq'].columns = names
-        data['GFF']['seq'].columns = names
-        
+ 
         l = data['GFF']['seq_length']     
         
         #localisation
@@ -361,8 +393,6 @@ class Plasmid:
             stop = start+self['U']-1 
 
         #deletion 
-
-        #deletion 
         updated_data = copy.deepcopy(data)
         updated_data['TTS']['TTS_pos']-= (data['TTS']['TTS_pos']>stop)*self['U']
         updated_data['TSS']['TSS_pos']-= (data['TSS']['TSS_pos']>stop)*self['U']
@@ -370,49 +400,32 @@ class Plasmid:
         updated_data['GFF']['seq']['start'] -= (data['GFF']['seq']['start']>stop)*self['U']
         updated_data['GFF']['seq']['end'] -= (data['GFF']['seq']['start']>stop)*self['U'] #changer si syntaxes bizarres ?
         
-        new_header = old_names.values
-        new_header[4] = str(l-self['U'])
-        
         updated_data['GFF']['seq_length'] = l-self['U']
-        updated_data['GFF']['seq'].columns = new_header
-        
-        data['GFF']['seq'].columns = new_header
         
         return(updated_data)
 
     def U_insertion(self,data) : 
         
         updated_data = copy.deepcopy(data)
-        
-        names=["seqid", "source", "type","start","end","score","strand","phase","attributes"]
-        old_names = data['GFF']['seq'].columns
-        
-        updated_data['GFF']['seq'].columns = names
-        data['GFF']['seq'].columns = names
-        
+
         data = self.data
         l = data['GFF']['seq_length']
+        
         #localisation
         start=np.random.randint(1,l+1)
         while ((sum((l-data['TSS']['TSS_pos']+start)%l<abs(data['TTS']['TTS_pos']-data['TSS']['TSS_pos']))) 
             | (sum((l-start+data['TTS']['TTS_pos'])%l<abs(data['TTS']['TTS_pos']-data['TSS']['TSS_pos'])))) : 
             start=np.random.randint(1,l+1)
+        
         #insertion 
-
         updated_data['TTS']['TTS_pos']+= (data['TTS']['TTS_pos']>start)*self['U']
         updated_data['TSS']['TSS_pos']+= (data['TSS']['TSS_pos']>start)*self['U']
         updated_data['Prot']['prot_pos'] += (data['Prot']['prot_pos']>start)*self['U']
- 
+        
         updated_data['GFF']['seq']['start'] += (data['GFF']['seq']['start']>start)*self['U']
         updated_data['GFF']['seq']['end'] += (data['GFF']['seq']['start']>start)*self['U'] 
-
-        new_header = old_names.values
-        new_header[4] = str(l+self['U'])
         
-        updated_data['GFF']['seq_length']+=self['U']
-        
-        updated_data['GFF']['seq'].columns = new_header
-        data['GFF']['seq'].columns = new_header
+        updated_data['GFF']['seq_length'] += self['U']
         
         return(updated_data)
     
@@ -420,6 +433,6 @@ class Plasmid:
         
         self.save_history()
         self.save_plasmid_description()
-
+        
         return
 

@@ -660,7 +660,6 @@ def start_transcribing(INI_file, output_dir):
             save_RNAPs_info, save_tr_info, save_Barr_sigma, save_Dom_size,
             cov_bp, tr_end)
 
-
 def start_transcribing_2(config, data):
 
     # get values from the config file TODO : change this to avoid reading
@@ -1025,7 +1024,7 @@ def start_transcribing_2(config, data):
     save_mean_sig_wholeGenome = np.array(save_mean_sig_wholeGenome)
     #save_files(output_dir, Barr_pos, Barr_type, Dom_size, Barr_ts_remain, Barr_sigma, tr_nbr, tr_times, save_RNAPs_info, save_tr_info, save_Barr_sigma, save_Dom_size, save_mean_sig_wholeGenome, DELTA_X, RNAPs_genSC, RNAPs_tr, RNAPs_pos, RNAPs_unhooked_id, init_rate, Kon, RNAPS_NB, SIGMA_0, GYRASE_CONC, TOPO_CONC)
 
-    print("\tSimulation completed successfully !!")#\n\tNumber of transcripts : \n")
+    #print("\tSimulation completed successfully !!")#\n\tNumber of transcripts : \n")
 
     return(tr_nbr)
 

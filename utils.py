@@ -7,9 +7,15 @@ import time as time
 import numpy as np
 
 def import_GFF(gff_file) :
+    
+    names = ["seqid", "source", "type","start","end","score","strand","phase","attributes"]
+    
     seq = pd.read_table(gff_file,sep = '\t', comment='#')
+    
     seq_name = seq.columns.values[0]
-    seq_length = int(seq.columns.values[4])
+    seq_length = int(float(seq.columns.values[4]))
+    seq.columns = names
+    
     return({'seq':seq,'seq_name':seq_name,'seq_length':seq_length})
 
 def load_tab_file(filename):  
@@ -31,6 +37,7 @@ def parse_config(config) :
     
     CONFIG = {}
     
+    CONFIG['CONFIG_NAME'] = config.get('INPUTS', 'CONFIG_NAME')
     CONFIG['SIM_TIME'] = config.getfloat('INPUTS', 'SIM_TIME')
     CONFIG['POP_SIZE'] = config.getfloat('INPUTS', 'POP_SIZE')
     
@@ -41,7 +48,6 @@ def parse_config(config) :
     
     CONFIG['PLASMID_PATH'] = config.get('PATHS', 'PLASMID_PATH')
     CONFIG['TARGET_PATH'] = config.get('PATHS', 'TARGET_PATH')
-    CONFIG['PARAMS_PATH'] = config.get('PATHS', 'PARAMS_PATH')
     
     CONFIG['GFF_FILE'] = config.get('PATHS', 'GFF_FILE')
     CONFIG['TSS_FILE'] = config.get('PATHS', 'TSS_FILE')
@@ -92,21 +98,23 @@ def read_plasmid_data(config):
     data = {'TTS':TTS,'TSS':TSS,'Prot':Prot,'GFF':GFF}
     return(data)
 
-def make_w_path(probs):
-    p = "pIns_" + str(round(probs[0],2))+"/pDel_" +str(round(probs[1],2))+"/pInv_" +str(round(probs[2],2)) +"/"
-    return(p)
+#def make_w_path(probs):
+    #p = "pIns_" + str(round(probs[0],2))+"/pDel_" +str(round(probs[1],2))+"/pInv_" +str(round(probs[2],2)) +"/"
+    #return(p)
 
 def get_working_path(config) :
     
     probs = config['PROBS']
     alphac = config['ALPHA_C']
     
-    res = '%d_%d_%d_%d'%(round(probs[0],2)*100,
-                         round(probs[1],2)*100,
-                         round(probs[2],2)*100,
-                         alphac)
+    #res = '%d_%d_%d_%d'%(round(probs[0],2)*100,
+                         #round(probs[1],2)*100,
+                         #round(probs[2],2)*100,
+                         #alphac)
+                         
+    res = config['CONFIG_NAME']
     
-    return '%s_%s'%(time.strftime('%d%m%H%M', time.gmtime()), res)
+    return '%s_%s'%(res, time.strftime('%d%m%H%M', time.localtime()))
 
 def copy_to_working_path(path_params_seq, working_path):
     #modify the config file from path_params_seq and copy it in working_path.
@@ -126,8 +134,27 @@ def copy_to_working_path(path_params_seq, working_path):
 
 # Removed 'h=True' because this argument is not known by my Pandas version ...
 # Seems to work
-def save_data_to_path(data,working_path):
-    data["TTS"].to_csv(working_path+"TTS.dat", sep='\t', index=False)
-    data["TSS"].to_csv(working_path+"TSS.dat", sep='\t', index=False)
-    data["GFF"]["seq"].to_csv(working_path+"gff.gff", sep='\t',index=False)
-    data["Prot"].to_csv(working_path+"prot.dat", sep='\t',index=False)
+def save_data(data, config):
+    
+    # Revert old colums names for futher usage of the genome
+    names = ['%s'%(data['GFF']['seq']['seqid'][0]), 
+             'RefSeq',
+             'region',
+             '1',
+             '%d'%(data['GFF']['seq_length']),
+             '.',
+             '+',
+             '.',
+             'ID=id0;Name=%s'%(data['GFF']['seq']['seqid'][0])]
+             
+    data['GFF']['seq'].columns = names
+    
+    data["TTS"].to_csv(config['WPATH'] + 'TTS.dat', sep='\t', index=False)
+    data["TSS"].to_csv(config['WPATH'] + 'TSS.dat', sep='\t', index=False)
+    data["GFF"]["seq"].to_csv(config['WPATH'] + 'gff.gff', sep='\t',index=False)
+    data["Prot"].to_csv(config['WPATH'] + 'prot.dat', sep='\t',index=False)
+    
+
+    names = ["seqid", "source", "type","start","end","score","strand","phase","attributes"]
+    
+    data['GFF']['seq'].columns = names
