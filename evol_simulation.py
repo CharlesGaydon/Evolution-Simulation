@@ -83,7 +83,7 @@ class Plasmid:
         self.history['fitness'] = [self.fitness]
         self.history['time'] = [self.time]
         self.history['event'] = ['Beg']
-        self.history['kept'] = [False]
+        self.history['kept'] = [True]
         self.history['plasmid'] = []
         
         plasmid_size = self.data['GFF']['seq_length']
