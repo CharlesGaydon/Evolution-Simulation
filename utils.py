@@ -38,8 +38,9 @@ def parse_config(config) :
     CONFIG = {}
     
     CONFIG['CONFIG_NAME'] = config.get('INPUTS', 'CONFIG_NAME')
-    CONFIG['SIM_TIME'] = config.getfloat('INPUTS', 'SIM_TIME')
-    CONFIG['POP_SIZE'] = config.getfloat('INPUTS', 'POP_SIZE')
+    CONFIG['SIM_TIME'] = config.getint('INPUTS', 'SIM_TIME')
+    CONFIG['POP_SIZE'] = config.getint('INPUTS', 'POP_SIZE')
+    CONFIG['N_REPS'] = config.getint('INPUTS', 'N_REPS')
     
     CONFIG['INI_PATH'] = config.get('PATHS', 'INI_PATH')
     CONFIG['SIM_PATH'] = config.get('PATHS', 'SIM_PATH')
@@ -61,10 +62,11 @@ def parse_config(config) :
     CONFIG['PINV'] = config.getfloat('SIMULATION', 'PINV')
     CONFIG['PDEL'] = config.getfloat('SIMULATION', 'PDEL')
     CONFIG['PINS'] = config.getfloat('SIMULATION', 'PINS')
-    CONFIG['U'] = config.getfloat('SIMULATION', 'UNIT')
+    CONFIG['U'] = config.getint('SIMULATION', 'UNIT')
     CONFIG['ALPHA_C'] = config.getint('SIMULATION', 'ALPHA_C')
     
     CONFIG['STEPS_DONE'] = config.getint('STATE', 'STEPS_DONE')
+    CONFIG['REPS_DONE'] = config.getint('STATE', 'REPS_DONE')
 
     # ---
     
@@ -154,7 +156,6 @@ def save_data(data, config):
     data["GFF"]["seq"].to_csv(config['WPATH'] + 'gff.gff', sep='\t',index=False)
     data["Prot"].to_csv(config['WPATH'] + 'prot.dat', sep='\t',index=False)
     
-
     names = ["seqid", "source", "type","start","end","score","strand","phase","attributes"]
     
     data['GFF']['seq'].columns = names

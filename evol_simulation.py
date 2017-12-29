@@ -19,7 +19,7 @@ def start_evol_simulation(config_path) :
     
     p1 = Plasmid(config)
 
-    p1.mutate(20)
+    p1.mutate(0,0)
     p1.save()
    
     #lancer la simulation : mutation, (N=1 : création d'un fichier next_params.ini et des fichiers 
@@ -31,6 +31,14 @@ def start_evol_simulation(config_path) :
     #si plusieurs individus, reprod sexuelle impossible... duplication simple ?
     #differencier les logs si N = 1 ou N > 1 
     #ptit plot de l'évolution de la fitness max qui fait plaiz'
+    
+    """  TODO
+    
+        - implement simulation recover/resume
+        - implement simulation repetition
+        - implement automated graph generation
+
+    """
 
 class Plasmid:
 
@@ -46,78 +54,69 @@ class Plasmid:
         print('Parameters  | %s'%self['CONFIG_NAME'])
         
         # creating required attributes
+        
+        self.ID = ID
+        self.rep = -1
+        self.time = -1
+        self.do_my = {'Ins':self.U_insertion, 
+                      'Del':self.U_deletion, 
+                      'Inv':self.U_inversion } #TODO : add inversion
+        
         self['PROBS'] /= np.sum(self['PROBS'])
         
-        os.system('mkdir -p ' + self['WPATH'])
+        os.system('mkdir -p ' + self['WPATH']) # TODO: if doesn't exists
         
         self.target = pd.read_csv(self['TARGET_PATH'],
                                   sep = '\t',
                                   header = None, 
                                   names = ['gene_id','expression'])
-                                  
-        self.data = utils.read_plasmid_data(self.config)
-        utils.save_data(self.data, self.CONFIG)
-        
-        self.ID = ID
-        self.time = 0
-        self.do_my = {'Ins':self.U_insertion, 
-                      'Del':self.U_deletion, 
-                      'Inv':self.U_inversion } #TODO : add inversion
-
-        # normalizing plamid
-        
-        offset = self.data['TSS']['TSS_pos'][0] - 1
-         
-        self.data['GFF']['seq']['start'] -= offset
-        self.data['GFF']['seq']['end'] -= offset
-        self.data['Prot']['prot_pos'] = (self.data['Prot']['prot_pos']-offset)%self.data['GFF']['seq_length']
-
-        self.data['TTS']['TTS_pos'] -= offset
-        self.data['TSS']['TSS_pos'] -= offset
-
-        self.fitness = self.get_fitness()  
-        
-        # setting history attributes
-        self.history = {}
-       
-        self.history['fitness'] = [self.fitness]
-        self.history['time'] = [self.time]
-        self.history['event'] = ['Beg']
-        self.history['kept'] = [True]
-        self.history['plasmid'] = []
-        
-        plasmid_size = self.data['GFF']['seq_length']
-
-        gene_ratio = np.sum(np.abs(self.data['TTS']['TTS_pos'] - \
-                            self.data['TSS']['TSS_pos']))/plasmid_size
             
-        UD_ratio = np.sum(self.data['TSS']['TUorient'] == '+') / \
-                   np.sum(self.data['TSS']['TUorient'] == '-') if \
-                   np.sum(self.data['TSS']['TUorient'] == '-') != 0 else \
-                   -1
-        
-        starts = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1)
-        stops  = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1)
-        mean_space = np.mean(np.abs(stops-starts))
 
-        self.history['plasmid_size'] = [plasmid_size]
-        self.history['gene_ratio'] = [gene_ratio]
-        self.history['up_down_ratio'] = [UD_ratio]
-        self.history['mean_space'] = [mean_space]
+        # setting history attributes and buildig DATA
+        self.history = {'fitness':[],
+                        'time':[],
+                        'repetition':[],
+                        'event':[],
+                        'kept':[],
+                        'plasmid':[],
+                        'plasmid_size':[],
+                        'gene_ratio':[],
+                        'up_down_ratio':[],
+                        'mean_space':[]
+                        }
+       
+        if self['STEPS_DONE'] == 0 and self['REPS_DONE'] == 0 :
+       
+            print('Simulation  | NEW')    
+       
+            self.restart_plasmid()
+            
+        
+        else :
+            
+            print('Simulation  | RESUME(T=%d, R=%s)'%(self['STEPS_DONE'], self['REPS_DONE']))
+            
+            # TODO : setup these from history
+            
+            self.history['fitness'] = []
+            self.history['time'] = []
+            self.history['event'] = []
+            self.history['kept'] = []
+            self.history['plasmid'] = []
+            self.history['repetition'] = []
+
+            self.history['plasmid_size'] = []
+            self.history['gene_ratio'] = []
+            self.history['up_down_ratio'] = []
+            self.history['mean_space'] = []
+
+            self.update_plasmid_description()
+            
+            self.time = self.init_time
+            self.repetition = self.init_reps
         
         
-        self.update_plasmid_description()  
-        
-        # cheking config
-     
-        min_gene_size = np.min(self.data['TTS']['TTS_pos']-self.data['TSS']['TSS_pos'])
-        
-        assert self['U'] < min_gene_size
-        assert np.all(self['PROBS'] > 0)
-        assert np.sum(self['PROBS']) == 1
-        assert np.all(self.data['TSS']['TSS_pos'][0] > 0)
-        assert np.all(self.data['TTS']['TTS_pos'][0] > 0)
-        assert self.data['TSS']['TSS_pos'][0] == 1
+        self.check_config()
         
         #sortie : time event fitness TODO : rajouter metadonnées (mean distance, etc)
         #TODO :  Charles to Baptiste : au passage, comme tu auras fais du calcul de distance entre gène, 
@@ -136,70 +135,76 @@ class Plasmid:
         
         return key in self.CONFIG
 
-    def mutate(self, rep = 1) : 
+    def mutate(self, sim = 1, rep = 1) : 
 
-        rep = self.CONFIG['SIM_TIME'] if rep <= 0 else rep
+        sim = self.CONFIG['SIM_TIME'] if sim <= 0 else sim
+        rep = self['N_REPS'] if rep <= 0 else rep
     
-        for i in range(rep) :
+        for repetition in range(self.rep, rep) :
             
-            print('-'*50)
-        
-            self.time += 1
+            if repetition > 0 : self.restart_plasmid()
+            
+            for simulation in range(self.time, sim + 1) :
+                
+                print('\n%sREP %d%s'%('-'*25, repetition, '-'*25))
+            
+                #MUTATION
+                choice = np.random.choice(['Ins','Del','Inv'], p = self['PROBS']) 
+                
+                print('T = %d\n\tOperation:\t%s'%(simulation, choice))
+            
+                apply_mut = self.do_my[choice]
+                updated_data = apply_mut(self.data)
 
-            #MUTATION
-            choice = np.random.choice(['Ins','Del','Inv'], p = self['PROBS']) 
-            
-            print('T = %d\n\tOperation:\t%s'%(self.time, choice))
-        
-            apply_mut = self.do_my[choice]
-            updated_data = apply_mut(self.data)
+                #SELECTION
+                next_fitness = self.get_fitness(updated_data)
+                keep_new = self.keep_mutated(next_fitness)
+                
+                if keep_new :
+                    
+                    print('\tPlasmid kept')
+                    
+                    self.data = updated_data
+                    self.fitness = next_fitness
+                    
+                    utils.save_data(updated_data, self.CONFIG)
+                
+                # Statistics
+                plasmid_size = self.data['GFF']['seq_length']
+                
+                gene_ratio = np.sum(np.abs(self.data['TTS']['TTS_pos'] - \
+                                    self.data['TSS']['TSS_pos']))/plasmid_size
+                
+                UD_ratio = np.sum(self.data['TSS']['TUorient'] == '+') / \
+                           np.sum(self.data['TSS']['TUorient'] == '-') if \
+                           np.sum(self.data['TSS']['TUorient'] == '-') != 0 else \
+                           -1
+                
+                starts = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1)
+                stops  = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1)
+                mean_space = np.mean(np.abs(stops-starts))
 
-            #SELECTION
-            
-            next_fitness = self.get_fitness()
-            
-            keep_new = self.keep_mutated(next_fitness)
-            
-            if keep_new :
-                print('\tPlasmid kept')
-                #UPDATE BEST
-                utils.save_data(updated_data, self.CONFIG)
-                self.data = copy.deepcopy(updated_data)
-                self.fitness = next_fitness
-                #UPDATE HISTORY
-            
-            self.history['time'].append(self.time)
-            self.history['event'].append(choice)
-            self.history['fitness'].append(self.fitness)
-            self.history['kept'].append(keep_new)
-            
-            plasmid_size = self.data['GFF']['seq_length']
-            self.history['plasmid_size'].append(plasmid_size)
-            
-            gene_ratio = np.sum(np.abs(self.data['TTS']['TTS_pos'] - \
-                                self.data['TSS']['TSS_pos']))/plasmid_size
-            self.history['gene_ratio'].append(gene_ratio)
-            
-            UD_ratio = np.sum(self.data['TSS']['TUorient'] == '+') / \
-                       np.sum(self.data['TSS']['TUorient'] == '-') if \
-                       np.sum(self.data['TSS']['TUorient'] == '-') != 0 else \
-                       -1
-                       
-            self.history['up_down_ratio'].append(UD_ratio)
-            
-            starts = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1)
-            stops  = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1)
-            mean_space = np.mean(np.abs(stops-starts))
-            
-            self.history['mean_space'].append(mean_space)
-            
-            ### RAJOUTER UNE DESCRIPTION COMPLETE DU GENOME.
-            
-            self.update_plasmid_description()
-    
-    def get_fitness(self) :
+                # History
+                self.history['time'].append(simulation)
+                self.history['repetition'].append(repetition)
+                self.history['event'].append(choice)
+                self.history['fitness'].append(self.fitness)
+                self.history['kept'].append(keep_new)
+
+                self.history['plasmid_size'].append(plasmid_size)
+                self.history['gene_ratio'].append(gene_ratio)           
+                self.history['up_down_ratio'].append(UD_ratio)                
+                self.history['mean_space'].append(mean_space)
+                
+                ### RAJOUTER UNE DESCRIPTION COMPLETE DU GENOME.
+                
+                self.update_plasmid_description()
+                
+                self.time += 1
         
-        proportions = simulation.start_transcribing_2(self.config, self.data) 
+    def get_fitness(self, data) :
+        
+        proportions = simulation.start_transcribing_2(self.config, data) 
         proportions = proportions/sum(proportions)
         
         #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
@@ -217,6 +222,77 @@ class Plasmid:
             print('\tAlpha:    \t%f'%alpha)
             return(np.random.choice([True,False], p = [alpha,1-alpha]))
     
+    def normalize_plasmid(self):
+    
+        offset = self.data['TSS']['TSS_pos'][0] - 1
+
+        self.data['GFF']['seq']['start'] -= offset
+        self.data['GFF']['seq']['end'] -= offset
+        self.data['Prot']['prot_pos'] = (self.data['Prot']['prot_pos']-offset)%self.data['GFF']['seq_length']
+
+        self.data['TTS']['TTS_pos'] -= offset
+        self.data['TSS']['TSS_pos'] -= offset
+
+        return
+    
+    def check_config(self):
+
+        min_gene_size = np.min(self.data['TTS']['TTS_pos']-self.data['TSS']['TSS_pos'])
+        
+        assert self['U'] < min_gene_size
+        assert np.all(self['PROBS'] > 0)
+        assert np.sum(self['PROBS']) == 1
+        assert np.all(self.data['TSS']['TSS_pos'][0] > 0)
+        assert np.all(self.data['TTS']['TTS_pos'][0] > 0)
+        assert self.data['TSS']['TSS_pos'][0] == 1
+        
+        return
+    
+    def restart_plasmid(self) :
+        
+        self.rep += 1
+        self.time = 0
+        
+        # Reading original data
+        self.data = utils.read_plasmid_data(self.config)
+        utils.save_data(self.data, self.CONFIG)
+        self.normalize_plasmid()
+        
+        # Computing first line of history
+        self.fitness = self.get_fitness(self.data)
+
+        plasmid_size = self.data['GFF']['seq_length']
+
+        gene_ratio = np.sum(np.abs(self.data['TTS']['TTS_pos'] - \
+                            self.data['TSS']['TSS_pos']))/plasmid_size
+            
+        UD_ratio = np.sum(self.data['TSS']['TUorient'] == '+') / \
+                   np.sum(self.data['TSS']['TUorient'] == '-') if \
+                   np.sum(self.data['TSS']['TUorient'] == '-') != 0 else \
+                   -1
+        
+        starts = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1)
+        stops  = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1)
+        mean_space = np.mean(np.abs(stops-starts))
+
+        self.history['fitness'].append(self.fitness)
+        self.history['time'].append(0)
+        self.history['repetition'].append(self.rep)
+        self.history['event'].append('Beg')
+        self.history['kept'].append(True)
+        #self.history['plasmid']
+        
+        self.history['plasmid_size'].append(plasmid_size)
+        self.history['gene_ratio'].append(gene_ratio)
+        self.history['up_down_ratio'].append(UD_ratio)
+        self.history['mean_space'].append(mean_space)
+        
+        self.update_plasmid_description()
+        
+        self.time += 1
+        
+        return
+    
     def update_plasmid_description(self):
         
         #TUindex	TUorient	TSS_pos	TSS_strength
@@ -226,6 +302,7 @@ class Plasmid:
         
         tim = self.time
         typ = 'G'
+        rep = self.rep
         
         for index in range(len(self.data['TSS'])) :
             
@@ -233,9 +310,10 @@ class Plasmid:
             ori = self.data['TSS']['TUorient'][index]
             lth = np.abs(self.data['TTS']['TTS_pos'][index] - self.data['TSS']['TSS_pos'][index])
             
+            
             ori = (1 if ori == '+' else -1)
             
-            self.history['plasmid'] += ['%d\t%s\t%d\t%d\t%d'%(tim, typ, pos, lth, ori)]
+            self.history['plasmid'] += ['%d\t%d\t%s\t%d\t%d\t%d'%(rep, tim, typ, pos, lth, ori)]
         
         typ = 'P'
         ori = 0
@@ -245,12 +323,12 @@ class Plasmid:
             
             pos = self.data['Prot']['prot_pos'][index]
             
-            self.history['plasmid'] += ['%d\t%s\t%d\t%d\t%d'%(tim, typ, pos, lth, ori)]
+            self.history['plasmid'] += ['%d\t%d\t%s\t%d\t%d\t%d'%(rep, tim, typ, pos, lth, ori)]
     
     def save_plasmid_description(self) :
         
         # Build string to save
-        res = 'time\ttype\tlocation\tlength\tstrand\n'
+        res = 'repetition\ttime\ttype\tlocation\tlength\tstrand\n'
         res = res + '\n'.join(self.history['plasmid'])
         
         # saving location
