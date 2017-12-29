@@ -1,5 +1,5 @@
-tousgenesidentiques/N_1
+simuations/
 evol_simulation.pyc
 simulation.pyc
 utils.pyc
-_pycache_
+__pycache__/
