@@ -20,8 +20,7 @@ def start_evol_simulation(config_path) :
     p1 = Plasmid(config)
 
     p1.mutate(0,0)
-    p1.save()
-   
+    
     #lancer la simulation : mutation, (N=1 : création d'un fichier next_params.ini et des fichiers 
     #TTS TSS GFF Prot ... _next correspondant)
     #N!=1 : actualisation des fichiers de donné.
@@ -34,44 +33,38 @@ def start_evol_simulation(config_path) :
     
     """  TODO
     
-        - implement simulation recover/resume
-        - implement simulation repetition
-        - implement automated graph generation
+        [x] implement simulation recover/resume
+        [x] implement simulation repetition
+        [ ] correct plasmid saving for each repetition
+        [ ] implement automated graph generation
+        [ ] implement multithreading
+        [ ] find other statistics
+        [ ] correct statistic (mean_space)
+        [x] implement regular saving
 
     """
 
 class Plasmid:
 
-    def __init__(self, config, ID = 1):
-        
-        self.config = config
-        self.CONFIG = utils.parse_config(self.config)
-        
-        # Some information
-        
-        print('Plasmid     | %s'%self['PLASMID_PATH'])
-        print('Environment | %s'%self['TARGET_PATH'])
-        print('Parameters  | %s'%self['CONFIG_NAME'])
+    def __init__(self, config):
         
         # creating required attributes
-        
-        self.ID = ID
         self.rep = -1
         self.time = -1
         self.do_my = {'Ins':self.U_insertion, 
                       'Del':self.U_deletion, 
                       'Inv':self.U_inversion } #TODO : add inversion
         
+        self.config = config
+        self.CONFIG = utils.parse_config(self.config)
+    
         self['PROBS'] /= np.sum(self['PROBS'])
-        
-        os.system('mkdir -p ' + self['WPATH']) # TODO: if doesn't exists
         
         self.target = pd.read_csv(self['TARGET_PATH'],
                                   sep = '\t',
                                   header = None, 
                                   names = ['gene_id','expression'])
-            
-
+    
         # setting history attributes and buildig DATA
         self.history = {'fitness':[],
                         'time':[],
@@ -85,38 +78,44 @@ class Plasmid:
                         'mean_space':[]
                         }
        
-        if self['STEPS_DONE'] == 0 and self['REPS_DONE'] == 0 :
+        # new simulation starts
+        if self['SIMS_DONE'] == 0 and self['REPS_DONE'] == 0 :
        
-            print('Simulation  | NEW')    
+            print('Simulation  | NEW (S: %d/%d R: %d/%d)'%(self['SIMS_DONE'],
+                                                             self['N_SIM'],
+                                                             self['REPS_DONE'],
+                                                             self['N_REP']))
+       
+            os.system('mkdir -p ' + self['WPATH']) # TODO: if doesn't exists       
        
             self.restart_plasmid()
             
+            self.save()
         
+        # simulation is already finished
+        elif self['SIMS_DONE'] >= self['N_SIM'] and self['REPS_DONE'] >= self['N_REP'] :
+            
+            print('Simulation  | ENDED')
+        
+            self.resume_plasmid()
+        
+        # resuming simulation
         else :
             
-            print('Simulation  | RESUME(T=%d, R=%s)'%(self['STEPS_DONE'], self['REPS_DONE']))
+            print('Simulation  | RESUME (S: %d/%d R: %d/%d)'%(self['SIMS_DONE'],
+                                                             self['N_SIM'],
+                                                             self['REPS_DONE'],
+                                                             self['N_REP']))
             
-            # TODO : setup these from history
+            # Update local path
             
-            self.history['fitness'] = []
-            self.history['time'] = []
-            self.history['event'] = []
-            self.history['kept'] = []
-            self.history['plasmid'] = []
-            self.history['repetition'] = []
-
-            self.history['plasmid_size'] = []
-            self.history['gene_ratio'] = []
-            self.history['up_down_ratio'] = []
-            self.history['mean_space'] = []
-
-            self.update_plasmid_description()
-            
-            self.time = self.init_time
-            self.repetition = self.init_reps
-        
+            self.resume_plasmid()
         
         self.check_config()
+        
+        print('Plasmid     | %s'%self['PLASMID_PATH'])
+        print('Environment | %s'%self['TARGET_PATH'])
+        print('Parameters  | %s'%self['CONFIG_NAME'])
         
         #sortie : time event fitness TODO : rajouter metadonnées (mean distance, etc)
         #TODO :  Charles to Baptiste : au passage, comme tu auras fais du calcul de distance entre gène, 
@@ -126,7 +125,7 @@ class Plasmid:
     def __getitem__(self, key) :
         
         return self.CONFIG[key]
-        
+
     def __setitem__(self, key, value) :
         
         self.CONFIG[key] = value
@@ -137,8 +136,14 @@ class Plasmid:
 
     def mutate(self, sim = 1, rep = 1) : 
 
-        sim = self.CONFIG['SIM_TIME'] if sim <= 0 else sim
-        rep = self['N_REPS'] if rep <= 0 else rep
+        # if simulation is ended
+        if self['SIMS_DONE'] >= self['N_SIM'] and \
+           self['REPS_DONE'] >= self['N_REP'] :
+                
+                return
+
+        sim = self.CONFIG['N_SIM'] if sim <= 0 else sim
+        rep = self['N_REP'] if rep <= 0 else rep
     
         for repetition in range(self.rep, rep) :
             
@@ -146,12 +151,17 @@ class Plasmid:
             
             for simulation in range(self.time, sim + 1) :
                 
-                print('\n%sREP %d%s'%('-'*25, repetition, '-'*25))
+                print('\n%s [S: %d/%d R: %d/%d] %s'%('-'*25, 
+                                                       self.time,
+                                                       self['N_SIM'],
+                                                       self.rep+1,
+                                                       self['N_REP'],
+                                                        '-'*25))
             
                 #MUTATION
                 choice = np.random.choice(['Ins','Del','Inv'], p = self['PROBS']) 
                 
-                print('T = %d\n\tOperation:\t%s'%(simulation, choice))
+                print('\tOperation:\t%s'%(choice))
             
                 apply_mut = self.do_my[choice]
                 updated_data = apply_mut(self.data)
@@ -180,8 +190,8 @@ class Plasmid:
                            np.sum(self.data['TSS']['TUorient'] == '-') != 0 else \
                            -1
                 
-                starts = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1)
-                stops  = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1)
+                starts = (self.data['GFF']['seq'])[['start', 'end']].max()
+                stops  = (self.data['GFF']['seq'])[['start', 'end']].min()
                 mean_space = np.mean(np.abs(stops-starts))
 
                 # History
@@ -201,6 +211,8 @@ class Plasmid:
                 self.update_plasmid_description()
                 
                 self.time += 1
+        
+                self.save()
         
     def get_fitness(self, data) :
         
@@ -237,7 +249,7 @@ class Plasmid:
     
     def check_config(self):
 
-        min_gene_size = np.min(self.data['TTS']['TTS_pos']-self.data['TSS']['TSS_pos'])
+        min_gene_size = np.abs(np.min(self.data['TTS']['TTS_pos']-self.data['TSS']['TSS_pos']))
         
         assert self['U'] < min_gene_size
         assert np.all(self['PROBS'] > 0)
@@ -254,8 +266,7 @@ class Plasmid:
         self.time = 0
         
         # Reading original data
-        self.data = utils.read_plasmid_data(self.config)
-        utils.save_data(self.data, self.CONFIG)
+        self.data = utils.read_plasmid_data(self.CONFIG)
         self.normalize_plasmid()
         
         # Computing first line of history
@@ -341,7 +352,7 @@ class Plasmid:
 
         print('Plasmid configuration saved to\t%s'%location)
 
-    def save_history(self) :
+    def save_history(self):
     
         # Build history data frame
         
@@ -356,6 +367,20 @@ class Plasmid:
         df.to_csv(path_or_buf = location, index = False, sep = '\t')
     
         print('Fitness history saved to\t%s'%location)
+
+    def save_config(self):
+        
+        self.config.set('PATHS', 'WPATH', str(self['WPATH']))
+        self.config.set('STATE', 'SIMS_DONE', str(self.time-1))
+        self.config.set('STATE', 'REPS_DONE', str(self.rep+1))
+        
+        file_name = self['WPATH'] + 'config.ini'
+        
+        with open(file_name, 'w') as config_file :
+            
+            self.config.write(config_file)
+            
+        print('Config saved to\t%s'%file_name)
 
     def U_inversion(self, data):
         
@@ -507,10 +532,47 @@ class Plasmid:
         
         return(updated_data)
     
+    def resume_plasmid(self):
+        
+        # Reading actual data
+        self.data = utils.read_saved_plasmid(self.CONFIG)
+        self.normalize_plasmid()
+        
+        self.rep = self['REPS_DONE'] - 1
+        self.time = self['SIMS_DONE'] + 1
+        
+        # resume history
+        df_hist = pd.read_table(self['WPATH'] + self['HISTORY_SAVE_NAME'])
+        
+        self.history['fitness'].extend(df_hist['fitness'])
+        self.history['time'].extend(df_hist['time'])
+        self.history['repetition'].extend(df_hist['repetition'])
+        self.history['event'].extend(df_hist['event'])
+        self.history['kept'].extend(df_hist['kept'])
+        
+        self.history['plasmid_size'].extend(df_hist['plasmid_size'])
+        self.history['gene_ratio'].extend(df_hist['gene_ratio'])
+        self.history['up_down_ratio'].extend(df_hist['up_down_ratio'])
+        self.history['mean_space'].extend(df_hist['mean_space'])
+        
+        # resume fitness
+        self.fitness = self.history['fitness'][-1]
+        
+        # resume plasmid
+        plasmid_lines = ''
+        
+        with open( self['WPATH'] + self['PLASMID_SAVE_NAME']) as plasmid_file :
+            
+            plasmid_lines = plasmid_file.read().splitlines()
+        
+        self.history['plasmid'].extend(plasmid_lines[1:])
+    
     def save(self) :
         
         self.save_history()
         self.save_plasmid_description()
+        utils.save_data(self.data, self.CONFIG) #TODO save for each repetition !
+        self.save_config()
         
         return
 

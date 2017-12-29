@@ -6,7 +6,11 @@ We make use of the existing implementation of a transcription model taking into 
 the physical structure of DNA and the coupling of neighboor genes, to proceed to the simulation
 of the evolution process that could occur only trough the relative reorganisation of the genome.
 
-Hypothesis : ...
+# Hypothesis
+
+- unit is 150 wide (insertions/deletions)
+- the smallest gene is larger than the unit
+- ...
 
 #### Authors
 
@@ -22,7 +26,6 @@ Hypothesis : ...
 - `plasmids/` contains the different plasmids used in the simulations;
 - `simulations/` contains the simulation's results (history and plasmids).
 
-
 ### Usage
 
 This code is designed for Linux. 
@@ -31,22 +34,27 @@ This code is designed for Linux.
 
 	`conda env create --file EvoEnv.yml`
 
-
 2. Then, activate the EvoEnv environment
 
 	`source activate EvoEnv`
 
-3. Run a simulation
+3. Start a new simulation
 	
-	`python start_evol_simulation.py paramsfiles/params_evo.ini`
+	`python start_evol_simulation.py paramsfiles/standard.ini`
+	
+4. Or resume a simulation
+
+	`python start_evol_simulation.py simulations/STD_XXXXXXXX/config.ini`
 
 ### Fitness graphs
 
 1. Install dependencies in R
 
-	`install.packages(ggplot2)`
+	`install.packages('ggplot2')`
+	`install.packages('ggtern')`
+	`install.packages('plotly')`
 
-2. Set-up the correct working directory
+2. Set-up the correct working directory _if needed_
 
 	`setwd("your_path")`
 
@@ -56,7 +64,7 @@ This code is designed for Linux.
 
 	`Rscript graphs.r`
 
-5. Enjoy the result
+5. Enjoy the results
 
 ![a fitness graph](https://github.com/CharlesGaydon/Evolution-Simulation/blob/master/display/example_graph.png)
 

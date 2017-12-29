@@ -38,9 +38,9 @@ def parse_config(config) :
     CONFIG = {}
     
     CONFIG['CONFIG_NAME'] = config.get('INPUTS', 'CONFIG_NAME')
-    CONFIG['SIM_TIME'] = config.getint('INPUTS', 'SIM_TIME')
+    CONFIG['N_SIM'] = config.getint('INPUTS', 'N_SIM')
     CONFIG['POP_SIZE'] = config.getint('INPUTS', 'POP_SIZE')
-    CONFIG['N_REPS'] = config.getint('INPUTS', 'N_REPS')
+    CONFIG['N_REP'] = config.getint('INPUTS', 'N_REP')
     
     CONFIG['INI_PATH'] = config.get('PATHS', 'INI_PATH')
     CONFIG['SIM_PATH'] = config.get('PATHS', 'SIM_PATH')
@@ -55,7 +55,6 @@ def parse_config(config) :
     CONFIG['TTS_FILE'] = config.get('PATHS', 'TTS_FILE')
     CONFIG['PROT_FILE'] = config.get('PATHS', 'PROT_FILE')
     
-    
     CONFIG['HISTORY_SAVE_NAME'] = config.get('PATHS', 'HISTORY_SAVE_NAME')
     CONFIG['PLASMID_SAVE_NAME'] = config.get('PATHS', 'PLASMID_SAVE_NAME')
     
@@ -65,7 +64,7 @@ def parse_config(config) :
     CONFIG['U'] = config.getint('SIMULATION', 'UNIT')
     CONFIG['ALPHA_C'] = config.getint('SIMULATION', 'ALPHA_C')
     
-    CONFIG['STEPS_DONE'] = config.getint('STATE', 'STEPS_DONE')
+    CONFIG['SIMS_DONE'] = config.getint('STATE', 'SIMS_DONE')
     CONFIG['REPS_DONE'] = config.getint('STATE', 'REPS_DONE')
 
     # ---
@@ -74,8 +73,15 @@ def parse_config(config) :
                                 CONFIG['PINS'],
                                 CONFIG['PINV']], 
                                 dtype=float)
-                                
-    CONFIG['WPATH'] = CONFIG['SIM_PATH'] + get_working_path(CONFIG) + '/'
+    
+    if config.has_option('PATHS', 'WPATH') :
+    
+        CONFIG['WPATH'] = config.get('PATHS', 'WPATH')
+        
+    else :
+        
+        CONFIG['WPATH'] = CONFIG['SIM_PATH'] + get_working_path(CONFIG) + '/'
+        
     CONFIG['HISTORY_SAVE_PATH'] = CONFIG['WPATH'] + CONFIG['HISTORY_SAVE_NAME']
     CONFIG['PLASMID_SAVE_PATH'] = CONFIG['WPATH'] + CONFIG['PLASMID_SAVE_NAME']
 
@@ -87,10 +93,10 @@ def parse_config(config) :
 def read_plasmid_data(config):
     
     # get inputs infos from the config file
-    GFF_file = config.get('PATHS', 'GFF_FILE')
-    TSS_file = config.get('PATHS', 'TSS_FILE')
-    TTS_file = config.get('PATHS', 'TTS_FILE')
-    Prot_file = config.get('PATHS', 'PROT_FILE')
+    GFF_file = config['GFF_FILE']
+    TSS_file = config['TSS_FILE']
+    TTS_file = config['TTS_FILE']
+    Prot_file = config['PROT_FILE']
     
     TTS = load_tab_file(TTS_file)
     TSS = load_tab_file(TSS_file)
@@ -99,6 +105,25 @@ def read_plasmid_data(config):
 
     data = {'TTS':TTS,'TSS':TSS,'Prot':Prot,'GFF':GFF}
     return(data)
+
+def read_saved_plasmid(config):
+    
+    wpath = config['WPATH']
+    
+    # get inputs infos from the config file
+    GFF_file =  wpath + 'gff.gff'
+    TSS_file = wpath + 'TSS.dat'
+    TTS_file = wpath + 'TTS.dat'
+    Prot_file = wpath + 'prot.dat'
+    
+    TTS = load_tab_file(TTS_file)
+    TSS = load_tab_file(TSS_file)
+    Prot = load_tab_file(Prot_file)
+    GFF = import_GFF(GFF_file)
+
+    data = {'TTS':TTS,'TSS':TSS,'Prot':Prot,'GFF':GFF}
+    return(data)
+    
 
 #def make_w_path(probs):
     #p = "pIns_" + str(round(probs[0],2))+"/pDel_" +str(round(probs[1],2))+"/pInv_" +str(round(probs[2],2)) +"/"

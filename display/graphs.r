@@ -4,6 +4,7 @@ library('ggtern')
 library('plotly')
 
 D = read.table('history.csv', sep='\t', header=T)
+D = D[ D$kept == "True", ]
 
 fitness = D$fitness
 time = D$time
@@ -13,6 +14,9 @@ gene_ratio = D$gene_ratio
 plasmid_size = D$plasmid_size
 up_down_ratio = D$up_down_ratio
 mean_space = D$mean_space
+repetition = D$repetition
+
+ggplot() + geom_line(aes(x=time, y=fitness, colour=factor(repetition))) + geom_point(aes(x=time, y=fitness, shape=event))
 
 seg = data.frame(x0=time[1:(length(time)-1)],
                  y0=fitness[1:(length(fitness)-1)],
@@ -28,28 +32,30 @@ plotA = ggplot() +
                    colour=events),
                data=seg,
                size=1.5) +
-  geom_point(aes(x=time, y=fitness, shape=factor(kept)), size=2) + 
+  geom_point(aes(x=time, y=fitness), size=2) + 
   xlab('Time') + 
   ylab('Fitness') + 
   ggtitle('Fitness evolution and events') + 
   theme(plot.title = element_text(lineheight=1, face="bold"))
 
-pdf('graph.pdf', width=10, height=6)
+#pdf('graph.pdf', width=10, height=6)
 plotA
-dev.off()
+#dev.off()
 
 #-----------
 
 pA = ggplot() + geom_line(aes(x=time, y=plasmid_size)) +
-  geom_point(aes(x=time, y=plasmid_size, colour=event, shape=kept), size=3)
+  geom_point(aes(x=time, y=plasmid_size, colour=event), size=2)
 pB = ggplot() + geom_line(aes(x=time, y=up_down_ratio)) +
-  geom_point(aes(x=time, y=up_down_ratio, colour=event, shape=kept), size=3)
+  geom_point(aes(x=time, y=up_down_ratio, colour=event), size=2)
 pC = ggplot() + geom_line(aes(x=time, y=mean_space)) +
-  geom_point(aes(x=time, y=mean_space, colour=event, shape=kept), size=3)
+  geom_point(aes(x=time, y=mean_space, colour=event), size=2)
 pD = ggplot() + geom_line(aes(x=time, y=gene_ratio)) +
-  geom_point(aes(x=time, y=gene_ratio, colour=event, shape=kept), size=3)
+  geom_point(aes(x=time, y=gene_ratio, colour=event), size=2)
 
 multiplot(pA,pB,pC,pD,cols=2)
+
+
 
 
 ggplot() + geom_line(aes(x=time, y=plasmid_size)) +
