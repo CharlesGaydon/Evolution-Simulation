@@ -8,15 +8,15 @@ of the evolution process that could occur only trough the relative reorganisatio
 
 # To-Do List
 
-[x] implement simulation recover/resume
-[x] implement simulation repetition
-[x] implement multithreading
-[x] correct statistic (mean_space)
-[x] implement regular saving
-[ ] correct plasmid saving for each repetition (**not relevant I think**)
-[ ] implement automated graph generation
-[ ] find other statistics
-[ ] handle rare exception in simulation computing... It wastes time
+- [x] implement simulation recover/resume
+- [x] implement simulation repetition
+- [x] implement multithreading
+- [x] correct statistic (mean_space)
+- [x] implement regular saving
+- [ ] correct plasmid saving for each repetition (**not relevant I think**)
+- [ ] implement automated graph generation
+- [ ] find other statistics
+- [ ] handle rare exception in simulation computing... It wastes time
 
 # Hypothesis
 
