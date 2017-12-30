@@ -733,8 +733,8 @@ def start_transcribing_2(INI_file, data):
 
     # Strands orientation
     strands = data["TSS"]["TUorient"].values
-    print("Orientation")
-    print(strands)
+    # print("Orientation")
+    # print(strands)
 
     # list of all possible transcripts
     tr_id, tr_strand, tr_start, tr_end, tr_rate, tr_size, ts_beg_all_trs, ts_remain_all = get_tr_info(data["TSS"], data["TTS"], TU_tts, Kon, Poff)
