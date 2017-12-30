@@ -31,22 +31,7 @@ def start_evol_simulation(config_path) :
     #actualiser ensuite les individus (si un seul individu inclure Metropolis dans l'individu.)
     #si plusieurs individus, reprod sexuelle impossible... duplication simple ?
     #differencier les logs si N = 1 ou N > 1 
-    #ptit plot de l'évolution de la fitness max qui fait plaiz'
     
-    """  TODO
-    
-        [x] implement simulation recover/resume
-        [x] implement simulation repetition
-        [-] correct plasmid saving for each repetition (not relevant I think)
-        [ ] implement automated graph generation
-        [x] implement multithreading
-        [ ] find other statistics
-        [x] correct statistic (mean_space)
-        [x] implement regular saving
-        [ ] handle rare exception in simulation computing... It wastes time
-
-    """
-
 class Plasmid:
 
     def __init__(self, config):

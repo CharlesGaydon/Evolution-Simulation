@@ -6,6 +6,18 @@ We make use of the existing implementation of a transcription model taking into 
 the physical structure of DNA and the coupling of neighboor genes, to proceed to the simulation
 of the evolution process that could occur only trough the relative reorganisation of the genome.
 
+# To-Do List
+
+[x] implement simulation recover/resume
+[x] implement simulation repetition
+[x] implement multithreading
+[x] correct statistic (mean_space)
+[x] implement regular saving
+[ ] correct plasmid saving for each repetition (**not relevant I think**)
+[ ] implement automated graph generation
+[ ] find other statistics
+[ ] handle rare exception in simulation computing... It wastes time
+
 # Hypothesis
 
 - unit is 150 wide (insertions/deletions)
