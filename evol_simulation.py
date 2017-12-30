@@ -87,7 +87,7 @@ class plasmid:
                         "None": lambda x : x} #TODO : add inversion
         self.data = utils.import_data_from_params_seq_file(PARAMS["path_params_seq"]+"params_seq.ini") #MODIFIED ! 
         #utils.copy_to_working_path(PARAMS['path_params_seq'], PARAMS["w_path_1"])
-        print(self.data)
+        # print(self.data)
 
         # AUTOMATISER
         self.data['GFF']['seq']["1"]-=1000
@@ -96,8 +96,8 @@ class plasmid:
 
         self.data['TTS']["TTS_pos"]-=1000
         self.data['TSS']["TSS_pos"]-=1000
-
-        self.fitness = self.get_fitness(PARAMS["path_params_seq"]+"params_seq.ini", PARAMS["w_path_1"])
+        # print("Params file : " + PARAMS["path_params_seq"]+"params_seq.ini")
+        self.fitness = self.get_fitness(PARAMS["path_params_seq"]+"params_seq.ini")
         
         #HISTORY
         self.hist_fitness = [self.fitness]
@@ -125,7 +125,8 @@ class plasmid:
 
         #SELECTION
         
-        next_fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini",PARAMS["w_path_1"])
+        # next_fitness = self.get_fitness(PARAMS["w_path_1"]+"params_seq.ini",PARAMS["w_path_1"])
+        next_fitness = self.get_fitness(PARAMS["path_params_seq"]+"params_seq.ini")
         
         keep_new = self.keep_mutated(next_fitness)
         
@@ -144,8 +145,8 @@ class plasmid:
             ### RAJOUTER UNE DESCRIPTION COMPLETE DU GENOME.
         
     
-    def get_fitness(self,params_file, w_path):
-        proportions = simulation.start_transcribing_2(params_file,self.data, w_path) 
+    def get_fitness(self,params_file):
+        proportions = simulation.start_transcribing_2(params_file,self.data) 
         #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
         proportions = proportions/sum(proportions)
         diff = -abs(proportions-PARAMS['perfection']["expression"].values)/len(proportions)

@@ -661,11 +661,10 @@ def start_transcribing(INI_file, output_dir):
             cov_bp, tr_end)
 
 
-def start_transcribing_2(INI_file, data, output_dir):
+def start_transcribing_2(INI_file, data):
 
     ####################### Params info ###################
     config = read_config_file(INI_file)
-
     # get inputs infos from the config file
     # GFF_file = config.get('INPUTS', 'GFF')
     # TSS_file = config.get('INPUTS', 'TSS')
