@@ -54,17 +54,26 @@ This code is designed for Linux.
 	
 	`python start_evol_simulation.py paramsfiles/standard.ini`
 	
-4. Or resume a simulation
+4. Or start new simulation**s** from a task file
+	
+	`python start_evol_simulation.py @tasks.txt`
+	
+4. Or resume a stopped simulation
 
-	`python start_evol_simulation.py simulations/STD_XXXXXXXX/config.ini`
+	`python start_evol_simulation.py simulations/XXX_XXXXXXXX/config.ini`
+
+5. Use `python start_evol_simulation.py --help` for further information
 
 ### Fitness graphs
 
 1. Install dependencies in R
 
 	`install.packages('ggplot2')`
+	
 	`install.packages('ggtern')`
+	
 	`install.packages('plotly')`
+	
 
 2. Set-up the correct working directory _if needed_
 
