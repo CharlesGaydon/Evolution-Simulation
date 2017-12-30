@@ -1,7 +1,7 @@
 rm(list=ls())
 library('ggplot2')
-library('ggtern')
-library('plotly')
+#library('ggtern')
+#library('plotly')
 
 D = read.table('history.csv', sep='\t', header=T)
 D = D[ D$kept == "True", ]

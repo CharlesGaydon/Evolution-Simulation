@@ -7,6 +7,8 @@ import simulation
 import utils
 import math
 
+LOG = False
+
 '''
 Authors : Charles GAYDON, Baptiste LAC
 Oct 2017- February 2018
@@ -35,12 +37,13 @@ def start_evol_simulation(config_path) :
     
         [x] implement simulation recover/resume
         [x] implement simulation repetition
-        [ ] correct plasmid saving for each repetition
+        [-] correct plasmid saving for each repetition (not relevant I think)
         [ ] implement automated graph generation
-        [ ] implement multithreading
+        [x] implement multithreading
         [ ] find other statistics
-        [ ] correct statistic (mean_space)
+        [x] correct statistic (mean_space)
         [x] implement regular saving
+        [ ] handle rare exception in simulation computing... It wastes time
 
     """
 
@@ -151,17 +154,16 @@ class Plasmid:
             
             for simulation in range(self.time, sim + 1) :
                 
-                print('\n%s [S: %d/%d R: %d/%d] %s'%('-'*25, 
+                print('%s [S: %d/%d R: %d/%d]'%(self['CONFIG_NAME'], 
                                                        self.time,
                                                        self['N_SIM'],
                                                        self.rep+1,
-                                                       self['N_REP'],
-                                                        '-'*25))
+                                                       self['N_REP']))
             
                 #MUTATION
                 choice = np.random.choice(['Ins','Del','Inv'], p = self['PROBS']) 
                 
-                print('\tOperation:\t%s'%(choice))
+                if LOG : print('\tOperation:\t%s'%(choice))
             
                 apply_mut = self.do_my[choice]
                 updated_data = apply_mut(self.data)
@@ -172,7 +174,7 @@ class Plasmid:
                 
                 if keep_new :
                     
-                    print('\tPlasmid kept')
+                    if LOG : print('\tPlasmid kept')
                     
                     self.data = updated_data
                     self.fitness = next_fitness
@@ -226,12 +228,12 @@ class Plasmid:
         return(round(np.sum(diff),5))
 
     def keep_mutated(self,next_fitness):
-        print('\tFitness:\t%f -> %f'%(round(self.fitness,4), round(next_fitness,4)))
+        if LOG : print('\tFitness:\t%f -> %f'%(round(self.fitness,4), round(next_fitness,4)))
         if next_fitness>self.fitness:
             return(True)
         else : 
             alpha = math.exp(-self['ALPHA_C']*abs(self.fitness-next_fitness))
-            print('\tAlpha:    \t%f'%alpha)
+            if LOG : print('\tAlpha:    \t%f'%alpha)
             return(np.random.choice([True,False], p = [alpha,1-alpha]))
     
     def normalize_plasmid(self):
@@ -252,7 +254,7 @@ class Plasmid:
         min_gene_size = np.abs(np.min(self.data['TTS']['TTS_pos']-self.data['TSS']['TSS_pos']))
         
         assert self['U'] < min_gene_size
-        assert np.all(self['PROBS'] > 0)
+        assert np.all(self['PROBS'] >= 0.0)
         assert np.sum(self['PROBS']) == 1
         assert np.all(self.data['TSS']['TSS_pos'][0] > 0)
         assert np.all(self.data['TTS']['TTS_pos'][0] > 0)
@@ -282,8 +284,8 @@ class Plasmid:
                    np.sum(self.data['TSS']['TUorient'] == '-') != 0 else \
                    -1
         
-        starts = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1)
-        stops  = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1)
+        starts = (self.data['GFF']['seq'])[['start', 'end']].max()
+        stops  = (self.data['GFF']['seq'])[['start', 'end']].min()
         mean_space = np.mean(np.abs(stops-starts))
 
         self.history['fitness'].append(self.fitness)
@@ -350,7 +352,7 @@ class Plasmid:
             
             f.write(res)
 
-        print('Plasmid configuration saved to\t%s'%location)
+        if LOG : print('Plasmid configuration saved to\t%s'%location)
 
     def save_history(self):
     
@@ -366,7 +368,7 @@ class Plasmid:
         # Save to CSV
         df.to_csv(path_or_buf = location, index = False, sep = '\t')
     
-        print('Fitness history saved to\t%s'%location)
+        if LOG : print('Fitness history saved to\t%s'%location)
 
     def save_config(self):
         
@@ -380,7 +382,7 @@ class Plasmid:
             
             self.config.write(config_file)
             
-        print('Config saved to\t%s'%file_name)
+        if LOG : print('Config saved to\t%s'%file_name)
 
     def U_inversion(self, data):
         
@@ -576,3 +578,6 @@ class Plasmid:
         
         return
 
+
+        
+        
