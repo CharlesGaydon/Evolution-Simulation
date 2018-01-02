@@ -169,17 +169,22 @@ class Plasmid:
                 # Statistics
                 plasmid_size = self.data['GFF']['seq_length']
                 
-                gene_ratio = np.sum(np.abs(self.data['TTS']['TTS_pos'] - \
-                                    self.data['TSS']['TSS_pos']))/plasmid_size
+                gene_ratio = ((self.data['TTS']['TTS_pos'] - \
+                                    self.data['TSS']['TSS_pos']).abs()).sum()/plasmid_size
                 
-                UD_ratio = np.sum(self.data['TSS']['TUorient'] == '+') / \
-                           np.sum(self.data['TSS']['TUorient'] == '-') if \
-                           np.sum(self.data['TSS']['TUorient'] == '-') != 0 else \
+                UD_ratio = (self.data['TSS']['TUorient'] == '+').sum() / \
+                           (self.data['TSS']['TUorient'] == '-').sum() if \
+                           (self.data['TSS']['TUorient'] == '-').sum() != 0 else \
                            -1
                 
-                starts = (self.data['GFF']['seq'])[['start', 'end']].max()
-                stops  = (self.data['GFF']['seq'])[['start', 'end']].min()
-                mean_space = np.mean(np.abs(stops-starts))
+                starts = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1).reset_index(drop=True)
+                stops  = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1).reset_index(drop=True)
+                starts_V = (stops[:-1] + 1).reset_index(drop=True)
+                stops_V  = (starts[1:] - 1).reset_index(drop=True)
+                lengths_V = stops_V - starts_V + 1
+                lengths_V = np.concatenate(lengths_V , self.data['GFF']['seq_length'] - stops.iat[-1])
+                
+                mean_space = lengths_V.mean()
 
                 # History
                 self.history['time'].append(simulation)
@@ -204,13 +209,10 @@ class Plasmid:
     def get_fitness(self, data) :
         
         proportions = simulation.start_transcribing_2(self.config, data) 
-        proportions = proportions/sum(proportions)
+        proportions = proportions/proportions.sum()
         
         #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
-        
-        diff = -abs(proportions-self.target['expression'].values)/len(proportions)
-        
-        return(round(np.sum(diff),5))
+        return -(proportions-self.target['expression']).abs().sum()/len(proportions)
 
     def keep_mutated(self,next_fitness):
         if LOG : print('\tFitness:\t%f -> %f'%(round(self.fitness,4), round(next_fitness,4)))
@@ -261,17 +263,23 @@ class Plasmid:
 
         plasmid_size = self.data['GFF']['seq_length']
 
-        gene_ratio = np.sum(np.abs(self.data['TTS']['TTS_pos'] - \
-                            self.data['TSS']['TSS_pos']))/plasmid_size
-            
-        UD_ratio = np.sum(self.data['TSS']['TUorient'] == '+') / \
-                   np.sum(self.data['TSS']['TUorient'] == '-') if \
-                   np.sum(self.data['TSS']['TUorient'] == '-') != 0 else \
+        gene_ratio = ((self.data['TTS']['TTS_pos'] - self.data['TSS']['TSS_pos']).abs()).sum() \
+                        /plasmid_size
+
+        UD_ratio = (self.data['TSS']['TUorient'] == '+').sum() / \
+                   (self.data['TSS']['TUorient'] == '-').sum() if \
+                   (self.data['TSS']['TUorient'] == '-').sum() != 0 else \
                    -1
         
-        starts = (self.data['GFF']['seq'])[['start', 'end']].max()
-        stops  = (self.data['GFF']['seq'])[['start', 'end']].min()
-        mean_space = np.mean(np.abs(stops-starts))
+        starts = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1).reset_index(drop=True)
+        stops  = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1).reset_index(drop=True)
+        starts_V = (stops[:-1] + 1).reset_index(drop=True)
+        stops_V  = (starts[1:] - 1).reset_index(drop=True)
+        
+        lengths_V = stops_V - starts_V + 1
+        lengths_V = np.concatenate(lengths_V , self.data['GFF']['seq_length'] - stops.values[-1])
+        
+        mean_space = lengths_V.mean()
 
         self.history['fitness'].append(self.fitness)
         self.history['time'].append(0)
@@ -302,16 +310,39 @@ class Plasmid:
         typ = 'G'
         rep = self.rep
         
-        for index in range(len(self.data['TSS'])) :
+        starts = (self.data['GFF']['seq'])[['start', 'end']].min(axis=1).reset_index(drop=True)
+        stops  = (self.data['GFF']['seq'])[['start', 'end']].max(axis=1).reset_index(drop=True)
+        lengths = stops - starts + 1
+        
+        for index in range(len(starts)) :
             
-            pos = self.data['TSS']['TSS_pos'][index]
-            ori = self.data['TSS']['TUorient'][index]
-            lth = np.abs(self.data['TTS']['TTS_pos'][index] - self.data['TSS']['TSS_pos'][index])
-            
+            pos = starts.iat[index]
+            ori = self.data['TSS']['TUorient'].iat[index]
+            lth = lengths.iat[index]
             
             ori = (1 if ori == '+' else -1)
             
             self.history['plasmid'] += ['%d\t%d\t%s\t%d\t%d\t%d'%(rep, tim, typ, pos, lth, ori)]
+        
+        
+        typ = 'V'
+        
+        starts_V = (stops.iloc[:-1] + 1).reset_index(drop=True)
+        stops_V =  (starts.iloc[1:] - 1).reset_index(drop=True)
+        lengths_V = stops_V - starts_V + 1
+        
+        ori = 0
+        
+        for index in range(len(starts_V)) :
+            
+            pos = starts_V.iat[index]
+            lth = lengths_V.iat[index]
+            
+            self.history['plasmid'] += ['%d\t%d\t%s\t%d\t%d\t%d'%(rep, tim, typ, pos, lth, ori)]
+        
+        
+        self.history['plasmid'] += ['%d\t%d\t%s\t%d\t%d\t%d'%(rep, tim, typ, stops.iat[-1], 
+                self.data['GFF']['seq_length'] - stops.iat[-1], ori)]
         
         typ = 'P'
         ori = 0
@@ -319,7 +350,7 @@ class Plasmid:
         
         for index in range(len(self.data['Prot'])) :
             
-            pos = self.data['Prot']['prot_pos'][index]
+            pos = self.data['Prot']['prot_pos'].iat[index]
             
             self.history['plasmid'] += ['%d\t%d\t%s\t%d\t%d\t%d'%(rep, tim, typ, pos, lth, ori)]
     
@@ -370,13 +401,13 @@ class Plasmid:
         if LOG : print('Config saved to\t%s'%file_name)
 
     def U_inversion(self, data):
-        
+
         updated_data = copy.deepcopy(data)
         
-        l = data['GFF']['seq_length']     
+        l = data['GFF']['seq_length']
         
-        a = np.random.randint(0,l)
-        b = np.random.randint(0,l)
+        a = np.random.randint(1,l)
+        b = np.random.randint(1,l)
         
         (a, b) = (b, a) if  a > b else  (a, b) # reversing if necessary
 
@@ -392,15 +423,14 @@ class Plasmid:
         
                 #print('rejected cuts %d / %d'%(a,b))
         
-                a = np.random.randint(0,l)
-                b = np.random.randint(0,l)
+                a = np.random.randint(1,l)
+                b = np.random.randint(1,l)
         
                 (a, b) = (b, a) if  a > b else  (a, b)
                 
         assert(b > a)
         
         # Genes inversions
-        
         genes_in_the_middle = np.logical_and(data['GFF']['seq']['start'] > a, data['GFF']['seq']['start'] < b)
         genes_oriented_forward = np.logical_and(data['GFF']['seq']['strand'] == '+', genes_in_the_middle)
         genes_oriented_backward = np.logical_and(np.logical_not(data['GFF']['seq']['strand'] == '+'), genes_in_the_middle)
@@ -410,7 +440,6 @@ class Plasmid:
         new_genes_stop  = a + (b - data['GFF']['seq']['end'][genes_in_the_middle])
         
         # Proteins inversions
-        
         proteins_in_the_middle = np.logical_and( 
                                         data['Prot']['prot_pos'] > a,
                                         data['Prot']['prot_pos'] < b )
@@ -419,7 +448,6 @@ class Plasmid:
         new_proteins_positions = a + (b - data['Prot']['prot_pos'][proteins_in_the_middle])
         
         # Update data
-        
         updated_data['Prot'].loc[proteins_in_the_middle, 'prot_pos'] = new_proteins_positions
         
         updated_data['GFF']['seq'].loc[genes_in_the_middle, 'start'] = new_genes_start
@@ -427,7 +455,6 @@ class Plasmid:
         
         updated_data['TSS'].loc[genes_in_the_middle, 'TSS_pos'] = new_genes_start
         updated_data['TTS'].loc[genes_in_the_middle,'TTS_pos'] = new_genes_stop
-        
         
         updated_data['GFF']['seq'].loc[genes_oriented_forward, 'strand'] = '-'
         updated_data['GFF']['seq'].loc[genes_oriented_backward, 'strand'] = '+'
@@ -439,11 +466,10 @@ class Plasmid:
         updated_data['TTS'].loc[genes_oriented_backward, 'TUorient'] = '+'
         
         # Sorting dataframes
-        
-        #updated_data['GFF']['seq'].sort_values(by='start', inplace=True)
-        #updated_data['TSS'].sort_values(by='TSS_pos', inplace=True)
-        #updated_data['TTS'].sort_values(by='TTS_pos', inplace=True)
-        #updated_data['Prot'].sort_values(by='prot_pos', inplace=True)
+        updated_data['GFF']['seq'].sort_values(by='start', inplace=True)
+        updated_data['TSS'].sort_values(by='TSS_pos', inplace=True)
+        updated_data['TTS'].sort_values(by='TTS_pos', inplace=True)
+        updated_data['Prot'].sort_values(by='prot_pos', inplace=True)
     
         # Debug section
      
@@ -473,17 +499,15 @@ class Plasmid:
         l = data['GFF']['seq_length']     
         
         #localisation
-        start=np.random.randint(0,l-self['U'])
-        stop = start+self['U']-1 #OKKKK : hyp que premiere base est premier gene.
-        #sinon relancer
-        #probleme si U est plus grand qu'un gene ! A corriger ! peut etre en amont lors de l'importation...
+        start = np.random.randint(1, l-self['U']) #entre [1 et 29849] par exemple ?
+        stop = start + self['U'] - 1 #par exemple start = 20000, stop = 20149 ? (deletion de 149 bases.. ?)
         
-        while (sum( ((data['TSS']['TSS_pos'] - start) >= self['U']))): #Prot ok)))  
-            start=np.random.randint(0,l-self['U'])
+        #sinon relancer
+        while sum(  ( (data['TSS']['TSS_pos'] - start) >= self['U']) ) : # PROTS ???
+            start=np.random.randint(1, l-self['U'])
             stop = start+self['U']-1 
 
         #deletion 
-        updated_data = copy.deepcopy(data)
         updated_data['TTS']['TTS_pos']-= (data['TTS']['TTS_pos']>stop)*self['U']
         updated_data['TSS']['TSS_pos']-= (data['TSS']['TSS_pos']>stop)*self['U']
         updated_data['Prot']['prot_pos'] -= (data['Prot']['prot_pos']>stop)*self['U']
