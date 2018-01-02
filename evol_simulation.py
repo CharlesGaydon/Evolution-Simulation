@@ -6,6 +6,7 @@ import os
 import simulation
 import utils
 import math
+import time
 '''
 Authors : Charles GAYDON, Baptiste LAC
 Oct 2017- February 2018
@@ -28,10 +29,10 @@ def start_evol_simulation(INI_file) :
     ## IMPORT PARAMS
     PARAMS['U'] = 150
     assert PARAMS['U']<1000 #max gene
-    PARAMS['SIM_TIME'] = 50
+    PARAMS['SIM_TIME'] = 200
     PARAMS['POP_SIZE'] = 1 # on ne gere que ce cas.
     PARAMS['path_params_seq'] = "tousgenesidentiques/"
-    PARAMS['probs'] =  np.array([0.0,0.0,1/3.0],dtype=float)
+    PARAMS['probs'] =  np.array([1/2,1/2,0.0],dtype=float)
     PARAMS["alpha_c"] = 700
     PARAMS['COMPUTE_FITNESS'] = True
 
@@ -40,6 +41,8 @@ def start_evol_simulation(INI_file) :
     PARAMS['w_path_1'] = PARAMS['path_params_seq']+ utils.make_w_path(PARAMS['probs'])  
 
     os.system("mkdir -p " + PARAMS['w_path_1']) #à adapter et peut etre deplacer dans plasmid.
+
+
     PARAMS['perfection'] = pd.read_csv(filepath_or_buffer = PARAMS['path_params_seq']+"environment.dat",
                         sep = '\t',
                         header=None, 
@@ -64,6 +67,7 @@ def start_evol_simulation(INI_file) :
 
     while Plasmid.time<PARAMS['SIM_TIME']:
         Plasmid.mutate()
+        print(Plasmid.data)
     Plasmid.save()
 
         #lancer la simulation : mutation, (N=1 : création d'un fichier next_params.ini et des fichiers 
@@ -104,7 +108,10 @@ class plasmid:
         self.hist_timestamp = [self.time]
         self.hist_event = ["Beg"]
         self.hist_kept = [False]
-        self.genes = pd.Series(["g1","g2","g3"])
+        self.genes = self.initialize_genes_description()
+        self.genes_after_inversion = None
+
+        print(self.genes)
         #sortie : time event fitness TODO : rajouter metadonnées (mean distance, etc)
         #TODO :  Charles to Baptiste : au passage, comme tu auras fais du calcul de distance entre gène, 
         # est-ce que tu
@@ -133,11 +140,17 @@ class plasmid:
         if keep_new :
             print("\tmutate !")
             #UPDATE BEST
-            utils.save_data_to_path(updated_data,PARAMS["w_path_1"])
+            # utils.save_data_to_path(updated_data,PARAMS["w_path_1"])
             self.data = copy.deepcopy(updated_data)
             self.fitness = next_fitness
+            if choice == "Inv":
+                self.genes = pd.concat([self.genes,self.genes_after_inversion])
             #UPDATE HISTORY
-        
+            else :
+                self.append_plasmid_description()
+        else :
+            self.append_plasmid_description()
+
         self.hist_timestamp.append(self.time)
         self.hist_event.append(choice)
         self.hist_fitness.append(self.fitness)
@@ -160,11 +173,59 @@ class plasmid:
             alpha = math.exp(-PARAMS["alpha_c"]*abs(self.fitness-next_fitness))
             print('\t%f'%alpha)
             return(np.random.choice([True,False], p = [alpha,1-alpha]))
-    def get_plasmid_description(self):
-        #idee : 
-        #self.gene = {"g1":[],"g2":[]...}
-        # for g in self.genes.keys()
-        #   self.gene[g].append([les infos.])
+    
+    def initialize_genes_description(self):
+        start = self.data["GFF"]["seq"].ix[:,3].values
+        end = self.data["GFF"]["seq"].ix[:,4].values
+        orientation = self.data["GFF"]["seq"].ix[:,6].values
+        length = abs(end-start)
+        names = ["g"+str(i+1) for i in range(len(start))]
+
+        e_start = np.copy(end)+1
+        e_end = np.copy(np.roll(start,-1))-1
+        e_end[-1] =  self.data["GFF"]["seq_length"]
+        eee = list(zip(e_start,e_end))
+        print("ici")
+        print(eee)
+        i = 0
+        to_delete = []
+        while i < len(eee):
+            e_s, e_e = eee[i]
+            for p in self.data["Prot"]["prot_pos"].values:
+                if p>e_s and p<e_e:
+                    eee.append((e_s,p-1))
+                    eee.append((p+1,e_e))
+                    to_delete.append(i)
+                    break
+            i+=1
+        for i in sorted(to_delete,reverse=True):
+            del eee[i]
+        
+        e_names = ["e"+str(i+1) for i in range(len(eee))]
+
+        eee = np.array(eee)
+        e_start = eee[:,0]
+
+        e_end = eee[:,1]
+        p = self.data["Prot"]["prot_pos"].values
+        p_names = ["p"+str(i+1) for i in range(len(p))]
+
+        names = names + e_names + p_names
+        start = start.tolist() + e_start.tolist() + p.tolist()
+        length = length.tolist() + abs(e_end-e_start).tolist() + [20 for i in range(len(p))] #changeable pour mise en valeur  
+        orientation = orientation.tolist() + ["+" for i in range(len(eee))] + ["+" for i in range(len(p))]
+        df = pd.DataFrame({"id" : names})
+        ts = str(self.time)
+        df["pos"+ts] = start
+        df["length"+ts] = length
+        df["dir"+ts] = orientation
+        df.set_index("id",inplace=True)
+        df = df.transpose()
+        return(df)
+
+    def append_plasmid_description(self):
+        df = self.initialize_genes_description()
+        self.genes = pd.concat([self.genes, df])
         return(0)
 
     def U_inversion(self, data):
@@ -185,7 +246,7 @@ class plasmid:
 
         start = updated_data["GFF"]["seq"].apply(lambda x : min(x["start"],x["end"]),axis=1)
         end = updated_data["GFF"]["seq"].apply(lambda x : max(x["start"],x["end"]),axis=1)
-        print(start,end)
+        # print(start,end)
         while   np.any(
                         np.logical_or(
                                 np.logical_and(a >= start, a<=end),
@@ -251,6 +312,14 @@ class plasmid:
         updated_data['GFF']['seq'].columns = old_names
         data['GFF']['seq'].columns = old_names
         
+
+        self.genes_after_inversion = self.genes.ix[-3:,:].copy()
+        print(self.genes_after_inversion)
+        real_positions = self.initialize_genes_description()
+        #change e index only
+
+
+
         # Debug section
      
         #print(data['GFF']['seq'])
@@ -359,13 +428,21 @@ class plasmid:
                                             'fitness' : self.hist_fitness,
                                             'kept' : self.hist_kept})
         
-        path = PARAMS["w_path_1"]+"history.csv"
+        path = PARAMS["w_path_1"]
         print("Saving evolution history to : "+path)
         
-        self.history.to_csv(path_or_buf = path, index=False, sep='\t',
+        self.history.to_csv(path_or_buf = path+"history.csv", index=False, sep=',',
                             columns=['time', 'event', 'kept', 'fitness'])
+        
+
+        self.genes = self.genes.transpose()
+        print(self.genes)
+        names = self.genes.index
+        self.genes.reset_index(drop=True)
+        self.genes.insert(0,"id",names.values)
+        self.genes.to_csv(path_or_buf = path+"plasmid_description.csv", index=False, sep=',')
     
         # Save
     
-        utils.save_data_to_path(self.data, PARAMS["w_path_1"] + '_final')
+        utils.save_data_to_path(self.data, PARAMS["w_path_1"] + 'final_')
 

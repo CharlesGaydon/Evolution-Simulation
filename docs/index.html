@@ -20,12 +20,24 @@ path {
 </style>
 
 <body>
-  <input id="slider" type="range" min="1" max="5" value="1" step="1" />
-  <span id="range"></span>
-  <button name="play" id="play">Play</button>
-  <svg width="1000" height="500">
-    <g transform="translate(300, 250)"></g>
-  </svg>
+  <div margin-left="200" style="color:#0000FF" transform="translate(50, 250)">
+    <h3>Plasmid evolution simulation</h3>
+  </div>
+  <div width="500" height="100" transform="translate(50, 250)">
+    <input id="slider" type="range" min="0" max="2" value="0" step="1" />
+    <span id="range"></span>
+    <button name="play" id="play">Play</button>
+  </div>
+
+  <div display="flex" height="500" width = "1000">
+    <svg float="left" width="50%" height="300" flex="1">
+      <g transform="translate(155, 145)"></g>
+    </svg>
+
+    <svg float="left" width="40%" height="300" flex="1">
+      <g2 transform="translate(0, 0)"></g>
+    </svg>
+  </div>
 
   <script src="js/d3.min.js"></script>
   <script>
@@ -33,8 +45,8 @@ path {
 // inspiration : https://bl.ocks.org/d3indepth/c9fd848b9410cc543a437b34c266ac64
 // Create an arc generator with configuration
 var arcGenerator = d3.arc()
-  .innerRadius(150)
-  .outerRadius(200);
+  .innerRadius(100)
+  .outerRadius(120);
 /*
 var arcData = [
   {label: 'A', startAngle: 0, endAngle: 0.2},
@@ -44,13 +56,31 @@ var arcData = [
   {label: 'E', startAngle: 3, endAngle: 2* Math.PI}
 ];*/
 
+
+playing_speed_interval = 350;
+
+
 function colcode(d){
   if(d.data.id.charAt(0) == "g"){
     return("green");
-  }else{
+  }else if (d.data.id.charAt(0) == "e"){
     return("#dbdbdb");
+  }else{
+    return("#8A2BE2");
   }
 }
+
+function code_event(d){
+  if(d.event == "Inv"){
+    return("green");
+  }else if (d.event == "Del"){
+    return("red");
+  }else{
+    return("#8A2BE2");
+  }
+}
+
+
 //slider
 var slider = document.getElementById("slider");
 var ts = document.getElementById("range");
@@ -61,12 +91,12 @@ slider.oninput = function() {
 
 
 
-d3.csv("/data/sample_plasmid.csv", function(error, data) {
+d3.csv("/data/plasmid_description.csv", function(error, data) {
   if (error) throw error;
   // accessors
   columns = Object.keys( data[0] ).slice()
   var nb_col = columns.length
-  var t_max = (nb_col-1)/3
+  var t_max = (nb_col-1)/3-1
   slider.max = t_max
 
 
@@ -78,9 +108,9 @@ d3.csv("/data/sample_plasmid.csv", function(error, data) {
     var length = "length"+ts.toString()
     var arcs = d3.pie()
         .sort(function(a,b){
-          return a[pos]<(b[pos])
+          return (b[pos]-a[pos]);
         })
-        .value(function(d) {return d[length];})(data);
+        .value(function(d) {console.log(d[pos]);return d[length];})(data);
 
     console.log(arcs)
 
@@ -88,7 +118,7 @@ d3.csv("/data/sample_plasmid.csv", function(error, data) {
                     .selectAll('path')
                     .data(arcs)
                     
-    paths.transition().duration(400).attr('d', arcGenerator)
+    paths.transition().duration(playing_speed_interval).attr('d', arcGenerator)
     //  .attr("fill", function(d){console.log(colcode(d));return colcode(d)})
 
     // Add labels, using .centroid() to position
@@ -98,19 +128,27 @@ d3.csv("/data/sample_plasmid.csv", function(error, data) {
       .data(arcs)
       .each(function(d) {
         var centroid = arcGenerator.centroid(d);
-        d3.select(this)
+        d3.select(this).transition().duration(playing_speed_interval)
           .attr('x', centroid[0])
           .attr('y', centroid[1])
           .attr('dy', '0.33em')
-          .text(d.data.id);
+          .text(function(d){
+            if(d.data.id.charAt(0) == "p"){
+              return("");
+            }else if(d.data.id.charAt(0) == "e"){
+              return("");
+            }else{
+              return(d.data.id);
+            }
+          });
     })
   }
     /// Initialisation
-    var pos = "pos1"
-    var length = "length1"
+    var pos = "pos0"
+    var length = "length0"
     var arcs = d3.pie()
         .sort(function(a,b){
-          return a[pos]<(b[pos])
+          return b[pos]-a[pos];
         })
         .value(function(d) {console.log(length,d[length]); return d[length]; })(data);
 
@@ -135,7 +173,15 @@ d3.csv("/data/sample_plasmid.csv", function(error, data) {
           .attr('x', centroid[0])
           .attr('y', centroid[1])
           .attr('dy', '0.33em')
-          .text(d.data.id);
+          .text(function(d){
+            if(d.data.id.charAt(0) == "p"){
+              return("");
+            }else if(d.data.id.charAt(0) == "e"){
+              return("");
+            }else{
+              return(d.data.id);
+            }
+          });
     })
   // other elements
   d3.select("#slider").on("input", function() {
@@ -148,6 +194,7 @@ d3.csv("/data/sample_plasmid.csv", function(error, data) {
 
 
 function step(){
+  console.log("doing a step")
   current_ts=parseInt(slider.value)+1
   console.log(current_ts,t_max)
   if (current_ts > t_max) {
@@ -158,9 +205,15 @@ function step(){
     playButton.text("Play");
     console.log("Slider moving: " + moving);
   }else{
-    slider.value+=1
+    console.log("here")
+    console.log(slider.value)
+    slider.value=current_ts
+    console.log(slider.value)
     ts.innerHTML = slider.value; 
+    console.log("here")
     update(slider.value)
+
+
   }
 }
 
