@@ -6,6 +6,7 @@ import os
 import simulation
 import utils
 import math
+import time
 
 LOG = False
 
@@ -45,8 +46,7 @@ class Plasmid:
         
         self.config = config
         self.CONFIG = utils.parse_config(self.config)
-    
-        self['PROBS'] /= np.sum(self['PROBS'])
+        self['PROBS'] /= np.sum(self['PROBS']) #self.CONFIG ?
         
         self.target = pd.read_csv(self['TARGET_PATH'],
                                   sep = '\t',
@@ -104,11 +104,7 @@ class Plasmid:
         print('Plasmid     | %s'%self['PLASMID_PATH'])
         print('Environment | %s'%self['TARGET_PATH'])
         print('Parameters  | %s'%self['CONFIG_NAME'])
-        
-        #sortie : time event fitness TODO : rajouter metadonnées (mean distance, etc)
-        #TODO :  Charles to Baptiste : au passage, comme tu auras fais du calcul de distance entre gène, 
-        # est-ce que tu
-        # peux aussi calculer la taille max d'un gène et modifier le 1000 du assert suivant stp ?
+
 
     def __getitem__(self, key) :
         
@@ -119,7 +115,7 @@ class Plasmid:
         self.CONFIG[key] = value
 
     def __contains__(self, key) :
-        
+
         return key in self.CONFIG
 
     def mutate(self, sim = 1, rep = 1) : 
@@ -223,6 +219,61 @@ class Plasmid:
             if LOG : print('\tAlpha:    \t%f'%alpha)
             return(np.random.choice([True,False], p = [alpha,1-alpha]))
     
+    # WILL BE DELETED
+    def initialize_genes_description(self):
+        start = self.data["GFF"]["seq"].ix[:,3].values
+        end = self.data["GFF"]["seq"].ix[:,4].values
+        orientation = self.data["GFF"]["seq"].ix[:,6].values
+        length = abs(end-start)
+        names = ["g"+str(i+1) for i in range(len(start))]
+
+        e_start = np.copy(end)+1
+        e_end = np.copy(np.roll(start,-1))-1
+        e_end[-1] =  self.data["GFF"]["seq_length"]
+        eee = list(zip(e_start,e_end))
+        print("ici")
+        print(eee)
+        i = 0
+        to_delete = []
+        while i < len(eee):
+            e_s, e_e = eee[i]
+            for p in self.data["Prot"]["prot_pos"].values:
+                if p>e_s and p<e_e:
+                    eee.append((e_s,p-1))
+                    eee.append((p+1,e_e))
+                    to_delete.append(i)
+                    break
+            i+=1
+        for i in sorted(to_delete,reverse=True):
+            del eee[i]
+        
+        e_names = ["e"+str(i+1) for i in range(len(eee))]
+
+        eee = np.array(eee)
+        e_start = eee[:,0]
+
+        e_end = eee[:,1]
+        p = self.data["Prot"]["prot_pos"].values
+        p_names = ["p"+str(i+1) for i in range(len(p))]
+
+        names = names + e_names + p_names
+        start = start.tolist() + e_start.tolist() + p.tolist()
+        length = length.tolist() + abs(e_end-e_start).tolist() + [20 for i in range(len(p))] #changeable pour mise en valeur  
+        orientation = orientation.tolist() + ["+" for i in range(len(eee))] + ["+" for i in range(len(p))]
+        df = pd.DataFrame({"id" : names})
+        ts = str(self.time)
+        df["pos"+ts] = start
+        df["length"+ts] = length
+        df["dir"+ts] = orientation
+        df.set_index("id",inplace=True)
+        df = df.transpose()
+        return(df)
+    # WILL BE DELETED
+    def append_plasmid_description(self):
+        df = self.initialize_genes_description()
+        self.genes = pd.concat([self.genes, df])
+        return(0)
+
     def normalize_plasmid(self):
     
         offset = self.data['TSS']['TSS_pos'][0] - 1
@@ -471,6 +522,14 @@ class Plasmid:
         updated_data['TTS'].sort_values(by='TTS_pos', inplace=True)
         updated_data['Prot'].sort_values(by='prot_pos', inplace=True)
     
+	#change e index only
+
+        # WILL BE DELETED - non necessary for now    
+        # self.genes_after_inversion = self.genes.ix[-3:,:].copy()
+        # print(self.genes_after_inversion)
+        # real_positions = self.initialize_genes_description()
+        
+
         # Debug section
      
         #print(data['GFF']['seq'])
@@ -507,7 +566,7 @@ class Plasmid:
             start=np.random.randint(1, l-self['U'])
             stop = start+self['U']-1 
 
-        #deletion 
+        #deletion
         updated_data['TTS']['TTS_pos']-= (data['TTS']['TTS_pos']>stop)*self['U']
         updated_data['TSS']['TSS_pos']-= (data['TSS']['TSS_pos']>stop)*self['U']
         updated_data['Prot']['prot_pos'] -= (data['Prot']['prot_pos']>stop)*self['U']
@@ -585,6 +644,16 @@ class Plasmid:
         utils.save_data(self.data, self.CONFIG) #TODO save for each repetition !
         self.save_config()
         
+        # WILL BE DELETED     
+        # <<<<<<< HEAD
+        #         path = PARAMS["w_path_1"]
+
+        #         self.genes = self.genes.transpose()
+        #         names = self.genes.index
+        #         self.genes.reset_index(drop=True)
+        #         self.genes.insert(0,"id",names.values)
+        #         self.genes.to_csv(path_or_buf = path+"plasmid_description.csv", index=False, sep=',')
+
         return
 
 

@@ -20,90 +20,221 @@ path {
 </style>
 
 <body>
-<!--
-  <input id="slider" type="range" min="1" max="5" value="1" step="1" />
-  <span id="range"></span>
-  <button name="play" id="play">Play</button>
--->
-  <svg width="1000" height="500">
-    <g transform="translate(300, 250)"></g>
-  </svg>
+  <div margin-left="200" style="color:#0000FF" transform="translate(50, 250)">
+    <h3>Plasmid evolution simulation</h3>
+  </div>
+  <div width="500" height="100" transform="translate(50, 250)">
+    <input id="slider" type="range" min="0" max="2" value="0" step="1" />
+    <span id="range"></span>
+    <button name="play" id="play">Play</button>
+  </div>
+
+  <div display="flex" height="500" width = "1000">
+    <svg float="left" width="50%" height="300" flex="1">
+      <g transform="translate(155, 145)"></g>
+    </svg>
+
+    <svg float="left" width="40%" height="300" flex="1">
+      <g2 transform="translate(0, 0)"></g>
+    </svg>
+  </div>
 
   <script src="js/d3.min.js"></script>
   <script>
 
-  // append svg to the DIV
-  d3.select(".chart").append("svg:svg");
-  
-  var render = function(dataset) {
-    
-    vis = d3.select("svg");   // select the svg
-      // set constants
-    var PI = Math.PI;
-    var arcMin = 75;        // inner radius of the first arc
-    var arcWidth = 15;      // width
-    var arcPad = 1;         // padding between arcs
-      // arc accessor
-      //  d and i are automatically passed to accessor functions,
-      //  with d being the data and i the index of the data
-    var drawArc = d3.arc()
-        .innerRadius(function(d, i) {
-          return  arcMin;
-          //return  arcMin + i*(arcWidth) + arcPad;
-        })
-        .outerRadius(function(d, i) {
-          return arcMin + arcWidth;
-          //return arcMin + (i+1)*(arcWidth);
-        })
-        .startAngle(0 * (PI/180))
-        .endAngle(function(d, i) {
-          return d*6 * (PI/180);
-        });
-      // bind the data
-    var arcs = vis.selectAll("path.arc-path").data(dataset);
-      // *** update existing arcs -- redraw them ***
-    arcs.attr("d", drawArc)
-        .attr("fill", function(d){
-          return "rgb(100, 100, 100)";
-        });
-      // draw arcs for new data
-    arcs.enter().append("svg:path")
-        .attr("class", "arc-path")                  // assigns a class for easier selecting
-        .attr("transform", "translate(400,200)")    // sets position--easier than setting x's and y's
-        .attr("fill", function(d){
-          return "rgb(100, 100, 100)";
-        })
-        .attr("d", drawArc);      // draw the arc
-  };
-  // you can safely ignore the code below.
-  //  the code is used to create a click area for people to regenerate
-  //  arcs by generating a new data set and calling render on that set
-    // for generating a random array of times
-  var generateTimes = function(quantity) {
+// inspiration : https://bl.ocks.org/d3indepth/c9fd848b9410cc543a437b34c266ac64
+// Create an arc generator with configuration
+var arcGenerator = d3.arc()
+  .innerRadius(100)
+  .outerRadius(120);
+/*
+var arcData = [
+  {label: 'A', startAngle: 0, endAngle: 0.2},
+  {label: 'B', startAngle: 0.2, endAngle: 0.6},
+  {label: 'C', startAngle: 0.6, endAngle: 1.4},
+  {label: 'D', startAngle: 1.4, endAngle: 3},
+  {label: 'E', startAngle: 3, endAngle: 2* Math.PI}
+];*/
 
-    return  quantity;
-  };
-  
-  
-    // drawing the click area
-  var initialize = function() {
-    render([1,2,1,4,1,5]);
-      // making the click circle
-    if(!d3.selectAll("circle.click-circle")[0].length) {    // if there is no click area..
-      d3.select("svg").append("circle")
-          .attr("class", 'click-circle')
-          .attr("transform", "translate(400,200)")
-          .attr("r", arcMin*0.85)
-          .attr("fill", "rgba(201, 201, 201, 0.5)")
-          .on("click", function(d) {
-            times = generateTimes(6);
-            render(times);
-          });
-    }
+
+playing_speed_interval = 350;
+
+
+function colcode(d){
+  if(d.data.id.charAt(0) == "g"){
+    return("green");
+  }else if (d.data.id.charAt(0) == "e"){
+    return("#dbdbdb");
+  }else{
+    return("#8A2BE2");
   }
-  initialize();
- 
- 
+}
+
+function code_event(d){
+  if(d.event == "Inv"){
+    return("green");
+  }else if (d.event == "Del"){
+    return("red");
+  }else{
+    return("#8A2BE2");
+  }
+}
+
+
+//slider
+var slider = document.getElementById("slider");
+var ts = document.getElementById("range");
+ts.innerHTML = "1"; // Display the default slider value
+slider.oninput = function() {
+  ts.innerHTML = this.value;
+}
+
+
+
+d3.csv("/data/plasmid_description.csv", function(error, data) {
+  if (error) throw error;
+  // accessors
+  columns = Object.keys( data[0] ).slice()
+  var nb_col = columns.length
+  var t_max = (nb_col-1)/3-1
+  slider.max = t_max
+
+
+  function update(ts){
+    console.log("update called with ts")
+    console.log(ts)
+
+    var pos = "pos"+ts.toString()
+    var length = "length"+ts.toString()
+    var arcs = d3.pie()
+        .sort(function(a,b){
+          return (b[pos]-a[pos]);
+        })
+        .value(function(d) {console.log(d[pos]);return d[length];})(data);
+
+    console.log(arcs)
+
+    var paths = d3.select('g')
+                    .selectAll('path')
+                    .data(arcs)
+                    
+    paths.transition().duration(playing_speed_interval).attr('d', arcGenerator)
+    //  .attr("fill", function(d){console.log(colcode(d));return colcode(d)})
+
+    // Add labels, using .centroid() to position
+    
+   d3.select('g')
+      .selectAll('text')
+      .data(arcs)
+      .each(function(d) {
+        var centroid = arcGenerator.centroid(d);
+        d3.select(this).transition().duration(playing_speed_interval)
+          .attr('x', centroid[0])
+          .attr('y', centroid[1])
+          .attr('dy', '0.33em')
+          .text(function(d){
+            if(d.data.id.charAt(0) == "p"){
+              return("");
+            }else if(d.data.id.charAt(0) == "e"){
+              return("");
+            }else{
+              return(d.data.id);
+            }
+          });
+    })
+  }
+    /// Initialisation
+    var pos = "pos0"
+    var length = "length0"
+    var arcs = d3.pie()
+        .sort(function(a,b){
+          return b[pos]-a[pos];
+        })
+        .value(function(d) {console.log(length,d[length]); return d[length]; })(data);
+
+    console.log(arcs)
+      d3.select('g')
+      .selectAll('path')
+      .data(arcs)
+      .enter()
+      .append('path')
+      .attr('d', arcGenerator)
+      .attr("fill", function(d){console.log(colcode(d));return colcode(d)})
+
+    // Add labels, using .centroid() to position
+    d3.select('g')
+      .selectAll('text')
+      .data(arcs)
+      .enter()
+      .append('text')
+      .each(function(d) {
+        var centroid = arcGenerator.centroid(d);
+        d3.select(this)
+          .attr('x', centroid[0])
+          .attr('y', centroid[1])
+          .attr('dy', '0.33em')
+          .text(function(d){
+            if(d.data.id.charAt(0) == "p"){
+              return("");
+            }else if(d.data.id.charAt(0) == "e"){
+              return("");
+            }else{
+              return(d.data.id);
+            }
+          });
+    })
+  // other elements
+  d3.select("#slider").on("input", function() {
+    update(+this.value);
+  });
+
+  // Player 
+//var i = 0
+//setInterval(function(){update(1+i%2); console.log(i%2);i++;},600)    
+
+
+function step(){
+  console.log("doing a step")
+  current_ts=parseInt(slider.value)+1
+  console.log(current_ts,t_max)
+  if (current_ts > t_max) {
+    moving = false;
+    //current_ts = 0;
+    clearInterval(timer);
+    // timer = 0;
+    playButton.text("Play");
+    console.log("Slider moving: " + moving);
+  }else{
+    console.log("here")
+    console.log(slider.value)
+    slider.value=current_ts
+    console.log(slider.value)
+    ts.innerHTML = slider.value; 
+    console.log("here")
+    update(slider.value)
+
+
+  }
+}
+
+var playButton = d3.select("#play");
+
+playButton.on("click",function(){
+  var button = d3.select(this)
+  if (button.text() == "Pause") {
+      moving = false;
+      clearInterval(timer);
+      // timer = 0;
+      button.text("Play");
+    } else {
+      moving = true;
+      timer = setInterval(step,600);
+      button.text("Pause");
+    }
+    console.log("Slider moving: " + moving);  
+})
+
+}) 
   </script>
 </body>
 </html>
