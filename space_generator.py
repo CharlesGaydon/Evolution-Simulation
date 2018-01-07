@@ -46,6 +46,34 @@ def save_probs(config, probs, prefix = 'PART', output_dir='paramsfiles/'):
     
     return files
     
+def save_alphas(config, alphas, prefix = 'APART', output_dir='paramsfiles/'):
+    
+    name = prefix + '_%d'
+    path = name + '.ini'
+    files = []
+    
+    if not os.path.isdir(os.path.join(os.getcwd(), output_dir)) :
+        os.system('mkdir ' + output_dir)
+    
+    for i, alpha in enumerate(alphas) :
+        
+        
+        config.set('SIMULATION', 'ALPHA_C', str(int(alpha)))
+        
+        config.set('INPUTS', 'CONFIG_NAME', name%i)
+    
+        output = output_dir + path%i
+    
+        with open(output, 'w') as config_file :
+            
+            config.write(config_file)
+    
+        files.append(output)
+    
+        print('Generated %s with alpha %s'%(output, alpha))
+    
+    return files
+    
 def simplex_generator(nsteps):
     
     slist = []
@@ -85,11 +113,15 @@ def main(args):
     path = args[1]
     comp = int(args[2])
     
-    config = read_base(path)
-    points = simplex_generator(comp)
-    files = save_probs(config, points, output_dir='paramsfiles/parts_%d/'%comp)
-    save_as_task(files, 'HOMO_%d.txt'%comp)
+    #config = read_base(path)
+    #points = simplex_generator(comp)
+    #files = save_probs(config, points, output_dir='paramsfiles/parts_%d/'%comp)
+    #save_as_task(files, 'HOMO_%d.txt'%comp)
     
+    config = read_base(path)
+    points = np.linspace(200,1000,comp)
+    files = save_alphas(config, points, output_dir='paramsfiles/aparts_%d/'%comp)
+    save_as_task(files, 'ALPH_%d.txt'%comp)
     
     return 0
 

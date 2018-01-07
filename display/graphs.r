@@ -1,14 +1,18 @@
 rm(list=ls())
-library('ggplot2')
-library('ggtern')
-library('plotly')
-library('colorspace')
-library('plotrix')
-library('plyr')
-# Sys.setenv("plotly_username"="blac")
-# Sys.setenv("plotly_api_key"="25rk3TlEakY37FkC5F2p")
 
-#--------- convenience function ------------------------------------------------
+library('ggplot2')
+#library('ggtern')
+library('colorspace')
+library('plyr')
+library('rmarkdown')
+
+args <- commandArgs(trailingOnly = TRUE)
+
+path_to_files = args[1]
+history_file = paste(path_to_files, 'history.csv', sep='')
+plasmid_file = paste(path_to_files, 'plasmid.csv', sep='')
+
+#--- Convenience function ------------------------------------------------------
 
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   library(grid)
@@ -46,10 +50,11 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   }
 }
 
-#--------- convenience function ------------------------------------------------
+# Summary
 
-D = read.table('history.csv', sep='\t', header=T)
-D = D[ D$kept == "True" & D$repetition == 0, ] # Eliminate not kept sequences
+DATA = read.table(history_file, sep='\t', header=T)
+
+D = DATA[ DATA$kept == "True", ] # Eliminate not kept sequences
 
 fitness = D$fitness
 time = D$time
@@ -61,14 +66,166 @@ up_down_ratio = D$up_down_ratio
 mean_space = D$mean_space
 repetition = D$repetition
 
+means = aggregate(fitness ~ repetition, D, mean);
+maxs = aggregate(fitness ~ repetition, D, max);
+vars = aggregate(fitness ~ repetition, D, var);
+
+MEAN = mean(means$fitness);
+MAX = max(maxs$fitness);
+
+D = DATA[DATA$event != 'Beg',]
+
+blank_theme <- theme_minimal()+
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.border = element_blank(),
+    panel.grid=element_blank(),
+    axis.ticks = element_blank())
+
+rep = ggplot(data=D,
+             aes(x='',
+                 fill=event)) +
+  stat_count(width=1) +
+  coord_polar('y') +
+  blank_theme
+
+pdf(paste(path_to_files, sep='', 'plt_events.pdf'), width=5, height=5)
+rep
+dev.off()
+
+# Plasmid plot
+
+PLAS = read.table(plasmid_file, header=T, sep='\t')
+
+P = PLAS[PLAS$repetition == 0,]
+last_sim_time = max(P$time)
+sub_P = P[P$repetition== 0 & P$time==last_sim_time,]
+sub_P = sub_P[order(sub_P$location),]
+
+s1 = sub_P$location - 1
+s2 = sub_P$location + sub_P$length - 1
+ty = sub_P$type
+or = sub_P$strand
+co = paste(sub_P$type, sub_P$strand)
+
+dfp = data.frame(s1, s2, ty, or, co)
+colnames(dfp) = row.names=c('start', 'stop', 'type', 'orient', 'color')
+p_size = max(sapply(dfp[,c('start', 'stop')], max))
+dfp$start = 2*pi*(1-dfp$start/p_size)
+dfp$stop  = 2*pi*(1-dfp$stop/p_size)
+
+offset = 90/360*pi*2
+
+pdf(paste(path_to_files, sep='', 'plt_plasmid.pdf'), width=6, height=6)
+plot(0, 0, 
+     col= NA, 
+     xlim=c(-1,1), 
+     ylim=c(-1, 1), 
+     main=NA,
+     xlab=NA, 
+     ylab=NA,
+     asp=1,
+     axes=F)
+for(i in 1:length(dfp$start)){
+  
+  xs = cos(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
+  ys = sin(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
+  
+  if(dfp$color[i] == 'G 1') acol = rgb(0, 0.4, 1.0)
+  else if (dfp$color[i] == 'G -1') acol = rgb(0, 1.0, 0.4)
+  else if (dfp$color[i] == 'V 0') acol = rgb(0, 0, 0)
+  else acol = rgb(0.5, 0.5, 0.5)
+  
+  if( dfp$type[i] != 'P'){
+    lines(xs, ys , col = acol , lwd=10, lend=1, ljoin=0)
+  }
+  else{
+    points(cos(offset + dfp$stop[i]), 
+           sin(offset + dfp$start[i]), 
+           pch=20, 
+           col=2, 
+           cex=3)
+  }
+  
+}
+
+# legend(-0.25, 0.65, 
+#        c('G+', 'G-', 'barrier'), 
+#        fill=c(rgb(0,0.4,1.0),
+#               rgb(0,1.0,0.4),
+#               NA),
+#        col = c(NA, NA, 2), pch = c(NA ,NA, 20), border=c(1,1,NA),
+#        cex=0.9)
+
+text(0, 0, paste('time:', last_sim_time, '\n',
+                 'size:', p_size, '\n'
+), offset = 0.5,  cex = 1, col = 1)
+
+dev.off()
+
+
+
+# Fitness evolution
+
+D = DATA[ DATA$kept == "True", ] # Eliminate not kept sequences
+
+fitness = D$fitness
+time = D$time
+event = D$event
+kept = D$kept
+gene_ratio = D$gene_ratio
+plasmid_size = D$plasmid_size
+up_down_ratio = D$up_down_ratio
+mean_space = D$mean_space
+repetition = D$repetition
+
+plot_evol =  ggplot(D) + 
+  geom_line(aes(x=time, y=fitness), 
+            size=1, 
+            color = rainbow_hcl(5)[repetition+1] ) +
+  facet_grid(repetition ~ . ) +
+  ggtitle('Fitness evolution') +
+  xlab('Time') +
+  ylab(time)
+
+pdf(paste(path_to_files, sep='', 'plt_evol.pdf'), width=8, height=6)
+plot_evol
+dev.off()
+
+
+plot_means = ggplot(D, aes(repetition, fitness, group=repetition)) + 
+  geom_violin(aes(fill=factor(repetition)), draw_quantiles = 0.5) +
+  ggtitle('Fitness repartition') +
+  xlab('Repetition') +
+  ylab('Fitness') +
+  theme(legend.position='none', legend.title = element_text('Oué'))
+
+pdf(paste(path_to_files, sep='', 'plt_means.pdf'), width=7, height=6)
+plot_means
+dev.off()
+
 # Fitness plot
+
+D = DATA[ DATA$kept == "True" & DATA$repetition == 0, ] # Eliminate not kept sequences
+
+fitness = D$fitness
+time = D$time
+event = D$event
+kept = D$kept
+gene_ratio = D$gene_ratio
+plasmid_size = D$plasmid_size
+up_down_ratio = D$up_down_ratio
+mean_space = D$mean_space
+repetition = D$repetition
+
 seg = data.frame(x0=time[1:(length(time)-1)],
                  y0=fitness[1:(length(fitness)-1)],
                  x1=time[2:length(time)],
                  y1=fitness[2:length(fitness)],
                  events=event[2:length(event)])
 
-plotA = ggplot() + 
+plot_fit = ggplot() + 
   geom_segment(aes(x=x0,
                    y=y0,
                    xend=x1,
@@ -82,32 +239,32 @@ plotA = ggplot() +
   ggtitle('Fitness evolution and events') + 
   theme(plot.title = element_text(lineheight=1, face="bold"))
 
-pdf('fitness.pdf', width=10, height=6)
-plotA
+pdf(paste(path_to_files, sep='', 'plt_fitness.pdf'), width=10, height=6)
+plot_fit
 dev.off()
 
-# Multiplot macro-statistics
+# Statistics
 
 seg2 = data.frame(x0=time[1:(length(time)-1)],
-                 y0=plasmid_size[1:(length(plasmid_size)-1)],
-                 x1=time[2:length(time)],
-                 y1=plasmid_size[2:length(plasmid_size)],
-                 events=event[2:length(event)])
+                  y0=plasmid_size[1:(length(plasmid_size)-1)],
+                  x1=time[2:length(time)],
+                  y1=plasmid_size[2:length(plasmid_size)],
+                  events=event[2:length(event)])
 
 pA =  ggplot() + 
-      geom_segment(aes(x=x0,
-                       y=y0,
-                       xend=x1,
-                       yend=y1,
-                       colour=events),
-                   data=seg2,
-                   size=1) +
-      geom_point(aes(x=time, y=plasmid_size), size=0.5) +
-      xlab('Time') + 
-      ylab('Plasmid size') + 
-      ggtitle('Plasmid size evolution') + 
-      theme(plot.title = element_text(lineheight=1, face="bold"), 
-            legend.position='none')
+  geom_segment(aes(x=x0,
+                   y=y0,
+                   xend=x1,
+                   yend=y1,
+                   colour=events),
+               data=seg2,
+               size=1) +
+  geom_point(aes(x=time, y=plasmid_size), size=0.5) +
+  xlab('Time') + 
+  ylab('Plasmid size') + 
+  ggtitle('Plasmid size evolution') + 
+  theme(plot.title = element_text(lineheight=1, face="bold"), 
+        legend.position='none')
 
 seg3 = data.frame(x0=time[1:(length(time)-1)],
                   y0=up_down_ratio[1:(length(up_down_ratio)-1)],
@@ -173,21 +330,11 @@ pD =  ggplot() +
         legend.position='none')  
 
 
-pdf('stats.pdf', width=10, height=6)
+pdf(paste(path_to_files, sep='', 'plt_stats.pdf'), width=10, height=6)
 multiplot(pA,pB,pC,pD,cols=2)
 dev.off()
 
-# Macro-stats to events
-
-fitness = D$fitness
-time = D$time
-event = D$event
-kept = D$kept
-gene_ratio = D$gene_ratio
-plasmid_size = D$plasmid_size
-up_down_ratio = D$up_down_ratio
-mean_space = D$mean_space
-repetition = D$repetition
+# Stats and events
 
 Devents = event[2:length(event)]
 Dfitness = fitness[2:length(fitness)] - fitness[1:length(fitness)-1]
@@ -203,7 +350,7 @@ Pfit = ggplot(dfd) +
   geom_histogram(aes(fitness, fill=event), bins=25, color=1) +
   xlab('Fitness') + 
   ylab('Count') +
-  theme(legend.position='none')  
+  theme(legend.position='right')  
 
 Pgratio = ggplot(dfd) +
   geom_histogram(aes(gratio, fill=event), bins=25, color=1) +
@@ -225,81 +372,20 @@ Pudratio = ggplot(dfd) +
 
 Pmspace = ggplot(dfd) +
   geom_histogram(aes(mspace, fill=event), bins=25, color=1) + 
-  xlab('Mean space between genes') + 
+  xlab('Mean space between genes') +
   ylab('Count') +
   theme(legend.position='none') 
 
-pdf('Dstats.pdf', width=6, height=6)
+pdf(paste(path_to_files, sep='', 'plt_stats_var.pdf'), width=6, height=6)
 multiplot(Psize, Pudratio, Pmspace, Pgratio,cols=2)
 dev.off()
 
-#--------------------------PLASMID PLOT ---------------------------
 
-P = read.table('plasmid.csv', header=T, sep='\t')
-P = P[P$repetition == 0,]
-last_sim_time = max(P$time)
-sub_P = P[P$repetition== 0 & P$time==last_sim_time,]
-sub_P = sub_P[order(sub_P$location),]
+#--- RMD FILE ------------------------------------------------------------------
 
-s1 = sub_P$location - 1
-s2 = sub_P$location + sub_P$length - 1
-ty = sub_P$type
-or = sub_P$strand
-co = paste(sub_P$type, sub_P$strand)
-
-dfp = data.frame(s1, s2, ty, or, co)
-colnames(dfp) = row.names=c('start', 'stop', 'type', 'orient', 'color')
-p_size = max(sapply(dfp[,c('start', 'stop')], max))
-dfp$start = 2*pi*(1-dfp$start/p_size)
-dfp$stop  = 2*pi*(1-dfp$stop/p_size)
-
-offset = 90/360*pi*2
-
-pdf('plasmid.pdf', width=6, height=6)
-plot(0, 0, 
-     col= NA, 
-     xlim=c(-1,1), 
-     ylim=c(-1, 1), 
-     main=NA,
-     xlab=NA, 
-     ylab=NA,
-     asp=1,
-     axes=F)
-for(i in 1:length(dfp$start)){
-  
-  xs = cos(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
-  ys = sin(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
-  
-  if(dfp$color[i] == 'G 1') acol = rgb(0, 0.4, 1.0)
-  else if (dfp$color[i] == 'G -1') acol = rgb(0, 1.0, 0.4)
-  else if (dfp$color[i] == 'V 0') acol = rgb(0, 0, 0)
-  else acol = rgb(0.5, 0.5, 0.5)
-  
-  if( dfp$type[i] != 'P'){
-    lines(xs, ys , col = acol , lwd=10, lend=1, ljoin=0)
-  }
-  else{
-    points(cos(offset + dfp$stop[i]), 
-           sin(offset + dfp$start[i]), 
-           pch=20, 
-           col=2, 
-           cex=3)
-  }
-    
-}
-
-legend(-0.25, 0.6, 
-       c('G+', 'G-', 'barrier'), 
-       fill=c(rgb(0,0.4,1.0),
-              rgb(0,1.0,0.4),
-              NA),
-       col = c(NA, NA, 2), pch = c(NA ,NA, 20), border=c(1,1,NA),
-       cex=0.9)
-
-text(0, 0, paste('time:', last_sim_time, '\n',
-                 'size:', p_size, '\n'
-                 ), offset = 0.5,  cex = 1, col = 1)
-
-dev.off()
-
+render('display/exporter.rmd', 
+       output_format='pdf_document',
+       output_file='summary.pdf',
+       output_dir=path_to_files,
+       quiet=T)
 

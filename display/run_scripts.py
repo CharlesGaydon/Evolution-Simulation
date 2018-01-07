@@ -1,11 +1,19 @@
 import os
 
-scripts = []
 
-scripts += ['graphs.r']
-scripts += ['rep.r']
+def main(args):
+        
+    script_path = 'display/graphs.r'
+    file_path = args[1]
 
-for s in scripts :
+    command = "Rscript %s %s --vanilla"%(script_path, file_path)
+    os.system(command)
     
-    os.system('Rscript %s'%s)
-    
+    return 0
+
+if __name__ == '__main__':
+    import sys
+    sys.exit(main(sys.argv))
+
+
+

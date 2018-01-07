@@ -24,10 +24,14 @@ def start_evol_simulation(config_path) :
 
         try:
                 p1.mutate(0,0)
+                os.system('python display/run_scripts.py %s'%('' + p1['WPATH']))
+                return(-1, p1['WPATH'])
         except:
-                print('An error occured during a simulation')
-                print('Plasmid name: %s'%p1['CONFIG_NAME'])
-
+                print('------ AN ERROR OCCURED -----')
+                print('\tPlasmid name: %s'%p1['CONFIG_NAME'])
+                os.system('python display/run_scripts.py %s'%('' + p1['WPATH']))
+                return(1, p1['WPATH'])
+                
         #lancer la simulation : mutation, (N=1 : création d'un fichier next_params.ini et des fichiers
         #TTS TSS GFF Prot ... _next correspondant)
         #N!=1 : actualisation des fichiers de donné.

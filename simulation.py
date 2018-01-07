@@ -209,9 +209,23 @@ def calc_sigma(Barr_sigma, GYRASE_CONC, k_GYRASE, x0_GYRASE, GYRASE_CTE, TOPO_CO
     RNAPs_genSC : RNAPs_genSC = J_0 * Delta_X (~ 0.0066)
                                 J_0 : SC generated when RNAP moves by bp 0.00011
     '''
-    #
-    d_sigma = (-GYRASE_CONC*1/(1+np.exp(-k_GYRASE*(Barr_sigma-x0_GYRASE)))*GYRASE_CTE + TOPO_CONC*1/(1+np.exp(k_TOPO*(Barr_sigma-x0_TOPO)))*TOPO_CTE) * DELTA_T
-    Barr_sigma += d_sigma
+    
+    done = False
+    trials = 0
+    max_trials = 5
+    
+    while not done and trials < max_trials :
+        
+        trials += 1
+    
+        try :
+            d_sigma = (-GYRASE_CONC*1/(1+np.exp(-k_GYRASE*(Barr_sigma-x0_GYRASE)))*GYRASE_CTE + TOPO_CONC*1/(1+np.exp(k_TOPO*(Barr_sigma-x0_TOPO)))*TOPO_CTE) * DELTA_T
+            Barr_sigma += d_sigma
+            done = True
+        except:
+            print('\tOVERFLOW ERROR\n\tTRIAL %d%/%d'%(trials, max_trials))
+            done = False
+            
     
     return Barr_sigma
 
