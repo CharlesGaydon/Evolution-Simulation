@@ -53,6 +53,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 # Summary
 
 DATA = read.table(history_file, sep='\t', header=T)
+# DATA = read.table('history.csv', sep='\t', header=T)
 
 D = DATA[ DATA$kept == "True", ] # Eliminate not kept sequences
 
@@ -199,7 +200,7 @@ plot_means = ggplot(D, aes(repetition, fitness, group=repetition)) +
   ggtitle('Fitness repartition') +
   xlab('Repetition') +
   ylab('Fitness') +
-  theme(legend.position='none', legend.title = element_text('Oué'))
+  theme(legend.position='none')
 
 pdf(paste(path_to_files, sep='', 'plt_means.pdf'), width=7, height=6)
 plot_means
@@ -346,40 +347,60 @@ Dmspace = mean_space[2:length(mean_space)] - mean_space[1:length(mean_space)-1]
 dfd = data.frame(Devents, Dfitness, Dsize, Dgratio, Dudratio, Dmspace)
 colnames(dfd) = c('event', 'fitness', 'size', 'gratio', 'udratio', 'mspace')
 
-Pfit = ggplot(dfd) +
-  geom_histogram(aes(fitness, fill=event), bins=25, color=1) +
-  xlab('Fitness') + 
-  ylab('Count') +
-  theme(legend.position='right')  
+# Pfit = ggplot(dfd) +
+#   geom_histogram(aes(fitness, fill=event), bins=25, color=1) +
+#   xlab('Fitness') + 
+#   ylab('Count') +
+#   theme(legend.position='right')  
+# 
+# Pgratio = ggplot(dfd) +
+#   geom_histogram(aes(gratio, fill=event), bins=25, color=1) +
+#   xlab('Gene ratio') + 
+#   ylab('Count') +
+#   theme(legend.position='none')  
+# 
+# Psize = ggplot(dfd) +
+#   geom_histogram(aes(size, fill=event), bins=25, color=1) +
+#   xlab('Plasmid size') + 
+#   ylab('Count') +
+#   theme(legend.position='none') 
+# 
+# Pudratio = ggplot(dfd) +
+#   geom_histogram(aes(udratio, fill=event), bins=25, color=1) + 
+#   xlab('+/- ratio') + 
+#   ylab('Count') +
+#   theme(legend.position='none') 
+# 
+# Pmspace = ggplot(dfd) +
+#   geom_histogram(aes(fitness, fill=event), bins=25, color=1) + 
+#   xlab('Fitness') +
+#   ylab('Count') +
+#   theme(legend.position='none') 
 
-Pgratio = ggplot(dfd) +
-  geom_histogram(aes(gratio, fill=event), bins=25, color=1) +
-  xlab('Gene ratio') + 
-  ylab('Count') +
-  theme(legend.position='none')  
+# pdf(paste(path_to_files, sep='', 'plt_stats_var.pdf'), width=6, height=6)
+# multiplot(Psize, Pudratio, Pmspace, Pgratio,cols=2)
+# dev.off()
 
-Psize = ggplot(dfd) +
-  geom_histogram(aes(size, fill=event), bins=25, color=1) +
-  xlab('Plasmid size') + 
-  ylab('Count') +
-  theme(legend.position='none') 
+L = length(dfd$event)
+L2 = as.integer(0.33*L)
+L3 = as.integer(0.66*L)
 
-Pudratio = ggplot(dfd) +
-  geom_histogram(aes(udratio, fill=event), bins=25, color=1) + 
-  xlab('+/- ratio') + 
-  ylab('Count') +
-  theme(legend.position='none') 
+R = cbind(c(rep('0%-33%',L2),
+            rep('34%-66%',L3-L2),
+            rep('67%-100%',L-L3)))
+dfd['type'] = as.factor(R)
 
-Pmspace = ggplot(dfd) +
-  geom_histogram(aes(mspace, fill=event), bins=25, color=1) + 
-  xlab('Mean space between genes') +
-  ylab('Count') +
-  theme(legend.position='none') 
+perevent_start = ggplot(dfd, aes(x=event, y=fitness, fill=event)) +
+  geom_violin(draw_quantiles=c(0.5)) +
+  facet_wrap(~type) +
+  xlab('Event') +
+  ylab('Effet en fitness') +
+  theme(legend.position='none') +
+  ggtitle('Events effet on fitness at different times')
 
-pdf(paste(path_to_files, sep='', 'plt_stats_var.pdf'), width=6, height=6)
-multiplot(Psize, Pudratio, Pmspace, Pgratio,cols=2)
+pdf(paste(path_to_files, sep='', 'plt_stats_var.pdf'), width=9, height=5)
+perevent_start
 dev.off()
-
 
 #--- RMD FILE ------------------------------------------------------------------
 

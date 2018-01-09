@@ -97,8 +97,8 @@ plot_fit
 multiplot(pA,pB,pC,pD,cols=2)
 ```
 
-## Events impact on statistics for the first repetition
+## Events impact on fitness for the first repetition
 
 ```{r evtimp, fig.width=9 , fig.heigh=5 }
-multiplot(Psize, Pudratio, Pmspace, Pgratio,cols=2)
+perevent_start
 ```

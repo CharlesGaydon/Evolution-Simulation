@@ -1,0 +1,91 @@
+---
+title: "Plasmid visualizer"
+author: "Baptiste Lac"
+date: "January 9, 2018"
+output: html_notebook
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r eruptions, echo=FALSE}
+
+D = read.table('plasmid.csv', header=T, sep='\t')
+Lrep = max(D$repetition)
+Drep = D[D$repetition == Lrep, ]
+
+tmin = min(Drep$time)
+tmax = max(Drep$time)
+
+inputPanel(
+  sliderInput("plasm_time", label = "Plasmid selection:",
+              min = tmin, max= tmax, value = tmin, step = 1, width='100%', tick=F,
+              animate = animationOptions(interval = 300, loop = TRUE))
+)
+
+renderPlot({
+  
+  
+  sub_P = Drep[Drep$time == input$plasm_time,]
+  sub_P = sub_P[order(sub_P$location),]
+  
+  s1 = sub_P$location - 1
+  s2 = sub_P$location + sub_P$length - 1
+  ty = sub_P$type
+  or = sub_P$strand
+  co = paste(sub_P$type, sub_P$strand)
+  
+  dfp = data.frame(s1, s2, ty, or, co)
+  colnames(dfp) = row.names=c('start', 'stop', 'type', 'orient', 'color')
+  p_size = max(sapply(dfp[,c('start', 'stop')], max))
+  dfp$start = 2*pi*(1-dfp$start/p_size)
+  dfp$stop  = 2*pi*(1-dfp$stop/p_size)
+  offset = 90/360*pi*2
+  
+  plot(0, 0, 
+       col= NA, 
+       xlim=c(-1,1), 
+       ylim=c(-1, 1), 
+       main=NA,
+       xlab=NA, 
+       ylab=NA,
+       asp=1,
+       axes=F)
+  
+  for(i in 1:length(dfp$start)){
+    
+    xs = cos(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
+    ys = sin(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
+    
+    if(dfp$color[i] == 'G 1') acol = rgb(0, 0.4, 1.0)
+    else if (dfp$color[i] == 'G -1') acol = rgb(0, 1.0, 0.4)
+    else if (dfp$color[i] == 'V 0') acol = rgb(0, 0, 0)
+    else acol = rgb(0.5, 0.5, 0.5)
+    
+    if( dfp$type[i] != 'P'){
+      lines(xs, ys , col = acol , lwd=10, lend=1, ljoin=0)
+    }
+    else{
+      points(cos(offset + dfp$stop[i]), 
+             sin(offset + dfp$start[i]), 
+             pch=20, 
+             col=2, 
+             cex=3)
+    }
+    
+  }
+
+  text(0, 0, paste('time:', input$plasm_time, '\n',
+                   'size:', p_size, '\n'
+  ), offset = 0.5,  cex = 1, col = 1)
+  
+
+})
+
+```
+
+
+

@@ -113,15 +113,16 @@ def main(args):
     path = args[1]
     comp = int(args[2])
     
-    #config = read_base(path)
-    #points = simplex_generator(comp)
-    #files = save_probs(config, points, output_dir='paramsfiles/parts_%d/'%comp)
-    #save_as_task(files, 'HOMO_%d.txt'%comp)
-    
     config = read_base(path)
-    points = np.linspace(200,1000,comp)
-    files = save_alphas(config, points, output_dir='paramsfiles/aparts_%d/'%comp)
-    save_as_task(files, 'ALPH_%d.txt'%comp)
+    points = simplex_generator(comp)
+    files = save_probs(config, points, output_dir='paramsfiles/strong_%d/'%comp,
+    prefix='STRG')
+    save_as_task(files, 'STRG_%d.txt'%comp)
+    
+    #config = read_base(path)
+    #points = np.linspace(200,1000,comp)
+    #files = save_alphas(config, points, output_dir='paramsfiles/aparts_%d/'%comp)
+    #save_as_task(files, 'ALPH_%d.txt'%comp)
     
     return 0
 
