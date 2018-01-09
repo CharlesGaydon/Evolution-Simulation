@@ -1,0 +1,104 @@
+---
+title: "Simulation summary"
+author: "Baptiste Lac & Charles Gaydon"
+date: "January 15, 2018"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(error = F)
+knitr::opts_chunk$set(message = F)
+knitr::opts_chunk$set(warning = F)
+knitr::opts_chunk$set(include = T)
+knitr::opts_chunk$set(fig.align='left')
+```
+
+# Summary
+
+Simulation: `r path_to_files`
+
+## Final score
+
+Max fitness is `r MAX`
+Mean fitness is `r MEAN`
+
+## Events repartition
+
+```{r summary, fig.width=3 , fig.heigh=3 }
+rep
+```
+
+## Last plasmid configuration
+
+```{r plasm, fig.width=6 , fig.heigh=6 }
+plot(0, 0, 
+     col= NA, 
+     xlim=c(-1,1), 
+     ylim=c(-1, 1), 
+     main=NA,
+     xlab=NA, 
+     ylab=NA,
+     asp=1,
+     axes=F)
+for(i in 1:length(dfp$start)){
+  
+  xs = cos(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
+  ys = sin(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
+  
+  if(dfp$color[i] == 'G 1') acol = rgb(0, 0.4, 1.0)
+  else if (dfp$color[i] == 'G -1') acol = rgb(0, 1.0, 0.4)
+  else if (dfp$color[i] == 'V 0') acol = rgb(0, 0, 0)
+  else acol = rgb(0.5, 0.5, 0.5)
+  
+  if( dfp$type[i] != 'P'){
+    lines(xs, ys , col = acol , lwd=10, lend=1, ljoin=0)
+  }
+  else{
+    points(cos(offset + dfp$stop[i]), 
+           sin(offset + dfp$start[i]), 
+           pch=20, 
+           col=2, 
+           cex=3)
+  }
+  
+}
+text(0, 0, paste('time:', last_sim_time, '\n',
+                 'size:', p_size, '\n'
+), offset = 0.5,  cex = 1, col = 1)
+```
+
+# Fitness evolution
+
+## For each experiment repetition
+
+```{r fit, fig.width=9 , fig.heigh=5 }
+plot_evol
+```
+
+## Means detail
+
+```{r means, fig.width=9 , fig.heigh=4 }
+plot_means
+```
+
+## Fitness evolution for the first repetition
+
+```{r fitevol, fig.width=9 , fig.heigh=5 }
+plot_fit
+```
+
+# Statistics
+
+## Statistics evolution for the first repetition
+
+```{r staevol, fig.width=9 , fig.heigh=5 }
+multiplot(pA,pB,pC,pD,cols=2)
+```
+
+## Events impact on statistics for the first repetition
+
+```{r evtimp, fig.width=9 , fig.heigh=5 }
+multiplot(Psize, Pudratio, Pmspace, Pgratio,cols=2)
+```

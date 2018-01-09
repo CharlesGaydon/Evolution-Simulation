@@ -1,0 +1,10 @@
+paramsfiles/aparts_10/APART_0.ini
+paramsfiles/aparts_10/APART_1.ini
+paramsfiles/aparts_10/APART_2.ini
+paramsfiles/aparts_10/APART_3.ini
+paramsfiles/aparts_10/APART_4.ini
+paramsfiles/aparts_10/APART_5.ini
+paramsfiles/aparts_10/APART_6.ini
+paramsfiles/aparts_10/APART_7.ini
+paramsfiles/aparts_10/APART_8.ini
+paramsfiles/aparts_10/APART_9.ini

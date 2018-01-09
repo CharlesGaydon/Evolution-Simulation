@@ -47,6 +47,8 @@ def PooledComputationOnProcessors(file_list, nproc) :
     
     print('STARTING SIMULATION: %d tasks will be run on %d processors'%(len(file_list), effective_nproc))
     
+    results = []
+    
     with Pool(effective_nproc) as p :
     
         p.map(evol.start_evol_simulation, file_list)
