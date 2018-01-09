@@ -1,0 +1,3 @@
+paramsfiles/TASK1.ini
+paramsfiles/TASK2.ini
+paramsfiles/TASK3.ini
