@@ -48,6 +48,7 @@ class Plasmid:
         # creating required attributes
         self.rep = -1
         self.time = -1
+        self.flag_resume = False
         self.do_my = {'Ins':self.U_insertion,
                       'Del':self.U_deletion,
                       'Inv':self.U_inversion } #TODO : add inversion
@@ -107,7 +108,9 @@ class Plasmid:
                                                              self['N_REP']))
 
             # Update local path
-
+            
+            self.flag_resume = True
+        
             self.resume_plasmid()
 
         self.check_config()
@@ -133,7 +136,6 @@ class Plasmid:
         # if simulation is ended
         if self['SIMS_DONE'] >= self['N_SIM'] and \
            self['REPS_DONE'] >= self['N_REP'] :
-
                 return
 
         sim = self.CONFIG['N_SIM'] if sim <= 0 else sim
@@ -141,7 +143,10 @@ class Plasmid:
 
         for repetition in range(self.rep, rep) :
 
-            if repetition > 0 : self.restart_plasmid()
+            if repetition > 0 and not self.flag_resume:
+                
+                 self.restart_plasmid()
+                 self.flag_resume = False
 
             for simulation in range(self.time, sim + 1) :
 
@@ -205,17 +210,22 @@ class Plasmid:
                 self.history['up_down_ratio'].append(UD_ratio)
                 self.history['mean_space'].append(mean_space)
 
-                ### RAJOUTER UNE DESCRIPTION COMPLETE DU GENOME.
-
                 self.update_plasmid_description()
 
-                self.time += 1
-
                 self.save()
+                
+                self.time += 1
+                
+                pass
+            
+            pass
+        
+        return
 
     def get_fitness(self, data) :
 
         proportions = simulation.start_transcribing_2(self.config, data)
+   
         proportions = proportions/proportions.sum()
 
         #FONCTIONNE EN L'ABSENCE D'INVERSION DE GENES -> adapter le calcul qd les genes changent d'ordre ans gff
@@ -528,33 +538,6 @@ class Plasmid:
         updated_data['TTS'].sort_values(by='TTS_pos', inplace=True)
         updated_data['Prot'].sort_values(by='prot_pos', inplace=True)
 
-	#change e index only
-
-        # WILL BE DELETED - non necessary for now
-        # self.genes_after_inversion = self.genes.ix[-3:,:].copy()
-        # print(self.genes_after_inversion)
-        # real_positions = self.initialize_genes_description()
-
-
-        # Debug section
-
-        #print(data['GFF']['seq'])
-        #print(genes_in_the_middle)
-        #print(new_genes_start)
-        #print(new_genes_stop)
-
-        #print('start: %d / stop: %d'%(a,b))
-        #print(data['Prot'])
-        #print(proteins_in_the_middle)
-        #print(data['Prot']['prot_pos'][proteins_in_the_middle])
-        #print(new_proteins_positions)
-
-        #print('start: %d / stop: %d'%(a,b))
-        #print(data['GFF']['seq'])
-
-        #print(updated_data['GFF']['seq'])
-        #print(updated_data['Prot'])
-
         return(updated_data)
 
     def U_deletion(self, data) :
@@ -628,7 +611,7 @@ class Plasmid:
         self.normalize_plasmid()
 
         self.rep = self['REPS_DONE'] - 1
-        self.time = self['SIMS_DONE'] + 1
+        self.time = self['SIMS_DONE']
 
         # resume history
         df_hist = pd.read_table(self['WPATH'] + self['HISTORY_SAVE_NAME'])

@@ -21,8 +21,15 @@ Simulation: `r path_to_files`
 
 ## Final score
 
-Max fitness is `r MAX`
-Mean fitness is `r MEAN`
+General max fitness is `r GMAX`
+
+General mean fitness is `r GMEAN`
+
+Means of means : `r MEAN`
+
+Deviation of means : `r SD`
+
+Mean of maxs : `r MAX`
 
 ## Events repartition
 
@@ -97,8 +104,15 @@ plot_fit
 multiplot(pA,pB,pC,pD,cols=2)
 ```
 
-## Events impact on statistics for the first repetition
+## Events impact on fitness for the first repetition
 
 ```{r evtimp, fig.width=9 , fig.heigh=5 }
-multiplot(Psize, Pudratio, Pmspace, Pgratio,cols=2)
+perevent_start
+```
+
+
+## Event kepts
+
+```{r keptev, fig.width=5 , fig.heigh=8 }
+multiplot(pall, pkept, cols=2)
 ```

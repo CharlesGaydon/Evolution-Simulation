@@ -28,14 +28,6 @@ parser.add_argument('input_files', metavar='files', nargs='+', help='list of con
 parser.add_argument('--nproc', help='number of processors to use', nargs='?', 
                     type=int, default=4, choices=[1,2,3,4,5,6,7,8], metavar='processors')
 
-
-#parser.add_argument('N_PROC', metavar='N_PROC', type=int, nargs='+',
-                    #help='number of processors to use')
-                    
-#parser.add_argument('--in', dest='input_file', action='store_const',
-                    #const=sum, default=max,
-                    #help='input file for the computation')
-
 args = parser.parse_args()
 
 #-------------------------------------------------------------------------------
@@ -57,8 +49,6 @@ def PooledComputationOnProcessors(file_list, nproc) :
 def PooledComputation(file_list):
     
     return PooledComputationOnProcessors(file_list, effective_nproc)
-
-
 
 PooledComputation(args.input_files)
 

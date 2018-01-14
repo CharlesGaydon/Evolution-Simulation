@@ -1,0 +1,10 @@
+paramsfiles/strong_4/STRG_0.ini
+paramsfiles/strong_4/STRG_1.ini
+paramsfiles/strong_4/STRG_2.ini
+paramsfiles/strong_4/STRG_3.ini
+paramsfiles/strong_4/STRG_4.ini
+paramsfiles/strong_4/STRG_5.ini
+paramsfiles/strong_4/STRG_6.ini
+paramsfiles/strong_4/STRG_7.ini
+paramsfiles/strong_4/STRG_8.ini
+paramsfiles/strong_4/STRG_9.ini
