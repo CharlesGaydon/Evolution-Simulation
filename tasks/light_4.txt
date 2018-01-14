@@ -1,0 +1,10 @@
+paramsfiles/light_4/LIGHT_0.ini
+paramsfiles/light_4/LIGHT_1.ini
+paramsfiles/light_4/LIGHT_2.ini
+paramsfiles/light_4/LIGHT_3.ini
+paramsfiles/light_4/LIGHT_4.ini
+paramsfiles/light_4/LIGHT_5.ini
+paramsfiles/light_4/LIGHT_6.ini
+paramsfiles/light_4/LIGHT_7.ini
+paramsfiles/light_4/LIGHT_8.ini
+paramsfiles/light_4/LIGHT_9.ini

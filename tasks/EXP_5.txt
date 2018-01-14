@@ -1,0 +1,15 @@
+paramsfiles/exp_5/EXP_0.ini
+paramsfiles/exp_5/EXP_1.ini
+paramsfiles/exp_5/EXP_2.ini
+paramsfiles/exp_5/EXP_3.ini
+paramsfiles/exp_5/EXP_4.ini
+paramsfiles/exp_5/EXP_5.ini
+paramsfiles/exp_5/EXP_6.ini
+paramsfiles/exp_5/EXP_7.ini
+paramsfiles/exp_5/EXP_8.ini
+paramsfiles/exp_5/EXP_9.ini
+paramsfiles/exp_5/EXP_10.ini
+paramsfiles/exp_5/EXP_11.ini
+paramsfiles/exp_5/EXP_12.ini
+paramsfiles/exp_5/EXP_13.ini
+paramsfiles/exp_5/EXP_14.ini
