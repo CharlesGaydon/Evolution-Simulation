@@ -115,9 +115,9 @@ def main(args):
     
     config = read_base(path)
     points = simplex_generator(comp)
-    files = save_probs(config, points, output_dir='paramsfiles/strong_%d/'%comp,
-    prefix='STRG')
-    save_as_task(files, 'STRG_%d.txt'%comp)
+    files = save_probs(config, points, output_dir='paramsfiles/light_%d/'%comp,
+    prefix='LIGHT')
+    save_as_task(files, 'light_%d.txt'%comp)
     
     #config = read_base(path)
     #points = np.linspace(200,1000,comp)

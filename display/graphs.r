@@ -1,7 +1,6 @@
 rm(list=ls())
 
 library('ggplot2')
-#library('ggtern')
 library('colorspace')
 library('plyr')
 library('rmarkdown')
@@ -53,7 +52,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 # Summary
 
 DATA = read.table(history_file, sep='\t', header=T)
-# DATA = read.table('history.csv', sep='\t', header=T)
+#DATA = read.table('history.csv', sep='\t', header=T)
 
 D = DATA[ DATA$kept == "True", ] # Eliminate not kept sequences
 
@@ -71,8 +70,8 @@ means = aggregate(fitness ~ repetition, D, mean);
 maxs = aggregate(fitness ~ repetition, D, max);
 vars = aggregate(fitness ~ repetition, D, var);
 
-MEAN = mean(means$fitness);
-MAX = max(maxs$fitness);
+GMEAN = mean(means$fitness);
+GMAX = max(maxs$fitness);
 
 D = DATA[DATA$event != 'Beg',]
 
@@ -98,6 +97,7 @@ dev.off()
 # Plasmid plot
 
 PLAS = read.table(plasmid_file, header=T, sep='\t')
+#PLAS = read.table('plasmid.csv', header=T, sep='\t')
 
 P = PLAS[PLAS$repetition == 0,]
 last_sim_time = max(P$time)
@@ -151,21 +151,11 @@ for(i in 1:length(dfp$start)){
   
 }
 
-# legend(-0.25, 0.65, 
-#        c('G+', 'G-', 'barrier'), 
-#        fill=c(rgb(0,0.4,1.0),
-#               rgb(0,1.0,0.4),
-#               NA),
-#        col = c(NA, NA, 2), pch = c(NA ,NA, 20), border=c(1,1,NA),
-#        cex=0.9)
-
 text(0, 0, paste('time:', last_sim_time, '\n',
                  'size:', p_size, '\n'
 ), offset = 0.5,  cex = 1, col = 1)
 
 dev.off()
-
-
 
 # Fitness evolution
 
@@ -208,7 +198,7 @@ dev.off()
 
 # Fitness plot
 
-D = DATA[ DATA$kept == "True" & DATA$repetition == 0, ] # Eliminate not kept sequences
+D = DATA[ DATA$kept == "True" & DATA$repetition == 0, ]
 
 fitness = D$fitness
 time = D$time
@@ -330,7 +320,6 @@ pD =  ggplot() +
   theme(plot.title = element_text(lineheight=1, face="bold"), 
         legend.position='none')  
 
-
 pdf(paste(path_to_files, sep='', 'plt_stats.pdf'), width=10, height=6)
 multiplot(pA,pB,pC,pD,cols=2)
 dev.off()
@@ -346,40 +335,6 @@ Dmspace = mean_space[2:length(mean_space)] - mean_space[1:length(mean_space)-1]
 
 dfd = data.frame(Devents, Dfitness, Dsize, Dgratio, Dudratio, Dmspace)
 colnames(dfd) = c('event', 'fitness', 'size', 'gratio', 'udratio', 'mspace')
-
-# Pfit = ggplot(dfd) +
-#   geom_histogram(aes(fitness, fill=event), bins=25, color=1) +
-#   xlab('Fitness') + 
-#   ylab('Count') +
-#   theme(legend.position='right')  
-# 
-# Pgratio = ggplot(dfd) +
-#   geom_histogram(aes(gratio, fill=event), bins=25, color=1) +
-#   xlab('Gene ratio') + 
-#   ylab('Count') +
-#   theme(legend.position='none')  
-# 
-# Psize = ggplot(dfd) +
-#   geom_histogram(aes(size, fill=event), bins=25, color=1) +
-#   xlab('Plasmid size') + 
-#   ylab('Count') +
-#   theme(legend.position='none') 
-# 
-# Pudratio = ggplot(dfd) +
-#   geom_histogram(aes(udratio, fill=event), bins=25, color=1) + 
-#   xlab('+/- ratio') + 
-#   ylab('Count') +
-#   theme(legend.position='none') 
-# 
-# Pmspace = ggplot(dfd) +
-#   geom_histogram(aes(fitness, fill=event), bins=25, color=1) + 
-#   xlab('Fitness') +
-#   ylab('Count') +
-#   theme(legend.position='none') 
-
-# pdf(paste(path_to_files, sep='', 'plt_stats_var.pdf'), width=6, height=6)
-# multiplot(Psize, Pudratio, Pmspace, Pgratio,cols=2)
-# dev.off()
 
 L = length(dfd$event)
 L2 = as.integer(0.33*L)
@@ -402,6 +357,52 @@ pdf(paste(path_to_files, sep='', 'plt_stats_var.pdf'), width=9, height=5)
 perevent_start
 dev.off()
 
+#--- OTHERS --------------------------------------------------------------------
+
+D = DATA[ DATA$kept == "True", ] # Eliminate not kept sequences
+
+DATA = DATA[DATA$event != 'Beg',]
+Dkept = DATA[ DATA$kept == "True", ]
+Dnot = DATA[ DATA$kept == "False", ]
+Dall = DATA
+
+cts_all = count(Dall, 'event')
+cts_all$freq = cts_all$freq/sum(cts_all$freq)
+
+cts_kept = count(Dkept, 'event')
+cts_kept$freq = cts_kept$freq/sum(cts_kept$freq)
+
+pall = ggplot(cts_all, aes(x='', weight=freq, fill=event)) +
+  geom_bar(width=0.5) +
+  xlab('All mutations') +
+  ylab('%') +
+  theme(legend.position='none')
+
+pkept = ggplot(cts_kept, aes(x='', weight=freq, fill=event)) +
+  geom_bar(width=0.5) +
+  xlab('Kept mutations') +
+  ylab('') +
+  theme(legend.position='none')
+
+pdf('res.pdf', width=5, height=8)
+multiplot(pall, pkept, cols=2)
+dev.off()
+
+# Additional stats
+
+D = DATA[DATA$event != 'Beg',]
+
+dat2 = ddply(D, 
+             c('repetition'), 
+             function(df) c(mean(df$fitness),
+                            sd(df$fitness),
+                            max(df$fitness)))
+colnames(dat2) = c('rep', 'mean', 'sd', 'max')
+
+MEAN = mean(dat2$mean)
+SD = sd(dat2$mean)
+MAX = mean(dat2$max)
+
 #--- RMD FILE ------------------------------------------------------------------
 
 render('display/exporter.rmd', 
@@ -409,4 +410,3 @@ render('display/exporter.rmd',
        output_file='summary.pdf',
        output_dir=path_to_files,
        quiet=T)
-

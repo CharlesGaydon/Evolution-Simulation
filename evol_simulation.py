@@ -210,7 +210,6 @@ class Plasmid:
                 self.history['up_down_ratio'].append(UD_ratio)
                 self.history['mean_space'].append(mean_space)
 
-
                 self.update_plasmid_description()
 
                 self.save()
