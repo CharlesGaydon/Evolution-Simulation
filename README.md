@@ -13,10 +13,10 @@ of the evolution process that could occur only trough the relative reorganisatio
 - [x] implement multithreading
 - [x] correct statistic (mean_space)
 - [x] implement regular saving
-- [ ] correct plasmid saving for each repetition (**not relevant I think**)
-- [ ] implement automated graph generation
-- [ ] find other statistics
-- [ ] handle rare exception in simulation computing... It wastes time
+- [x] correct plasmid saving for each repetition (**not relevant I think**)
+- [x] implement automated graph generation
+- [x] find other statistics
+- [x] handle rare exception in simulation computing... It wastes time
 
 # Hypothesis
 
@@ -36,17 +36,18 @@ of the evolution process that could occur only trough the relative reorganisatio
 - `environments/` contains the target environment's description for the expression of the genes;
 - `paramsfiles/` contains the `.ini` files used to describe the simulation's parameters;
 - `plasmids/` contains the different plasmids used in the simulations;
-- `simulations/` contains the simulation's results (history and plasmids).
+- `simulations/` contains the simulation's results (history and plasmids);
+- `tasks/` contains tasks to launch pooled simulations.
 
 ### Usage
 
 This code is designed for Linux. 
 
-1. First, install a conda env containing the dependencies
+1. First, install dependencies
 
 	`conda env create --file EvoEnv.yml`
 
-2. Then, activate the EvoEnv environment
+2. Then, activate the development environment
 
 	`source activate EvoEnv`
 
@@ -54,9 +55,9 @@ This code is designed for Linux.
 	
 	`python start_evol_simulation.py paramsfiles/standard.ini`
 	
-4. Or start new simulation**s** from a task file
+4. Or start new simulation**s** from a task file on 4 processsors
 	
-	`python start_evol_simulation.py @tasks.txt`
+	`python start_evol_simulation.py @tasks/tasks.txt --nproc 4`
 	
 4. Or resume a stopped simulation
 
@@ -64,32 +65,4 @@ This code is designed for Linux.
 
 5. Use `python start_evol_simulation.py --help` for further information
 
-### Fitness graphs
-
-1. Install dependencies in R
-
-	`install.packages('ggplot2')`
-	
-	`install.packages('ggtern')`
-	
-	`install.packages('plotly')`
-	
-
-2. Set-up the correct working directory _if needed_
-
-	`setwd("your_path")`
-
-3. Copy a `history.csv` file next to `display/graphs.r`
-
-4. Run the script 
-
-	`Rscript graphs.r`
-
-5. Enjoy the results
-
-![a fitness graph](https://github.com/CharlesGaydon/Evolution-Simulation/blob/master/display/example_graph.png)
-
-#### Coding Conventions
-
-- indent = 4 spaces
-- Python version > 3.x
+6. Graphs are automatically generated in the `simulations/` folder !

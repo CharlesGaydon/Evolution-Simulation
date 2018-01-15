@@ -94,69 +94,6 @@ pdf(paste(path_to_files, sep='', 'plt_events.pdf'), width=5, height=5)
 rep
 dev.off()
 
-# Plasmid plot
-
-PLAS = read.table(plasmid_file, header=T, sep='\t')
-#PLAS = read.table('plasmid.csv', header=T, sep='\t')
-
-P = PLAS[PLAS$repetition == 0,]
-last_sim_time = max(P$time)
-sub_P = P[P$repetition== 0 & P$time==last_sim_time,]
-sub_P = sub_P[order(sub_P$location),]
-
-s1 = sub_P$location - 1
-s2 = sub_P$location + sub_P$length - 1
-ty = sub_P$type
-or = sub_P$strand
-co = paste(sub_P$type, sub_P$strand)
-
-dfp = data.frame(s1, s2, ty, or, co)
-colnames(dfp) = row.names=c('start', 'stop', 'type', 'orient', 'color')
-p_size = max(sapply(dfp[,c('start', 'stop')], max))
-dfp$start = 2*pi*(1-dfp$start/p_size)
-dfp$stop  = 2*pi*(1-dfp$stop/p_size)
-
-offset = 90/360*pi*2
-
-pdf(paste(path_to_files, sep='', 'plt_plasmid.pdf'), width=6, height=6)
-plot(0, 0, 
-     col= NA, 
-     xlim=c(-1,1), 
-     ylim=c(-1, 1), 
-     main=NA,
-     xlab=NA, 
-     ylab=NA,
-     asp=1,
-     axes=F)
-for(i in 1:length(dfp$start)){
-  
-  xs = cos(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
-  ys = sin(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
-  
-  if(dfp$color[i] == 'G 1') acol = rgb(0, 0.4, 1.0)
-  else if (dfp$color[i] == 'G -1') acol = rgb(0, 1.0, 0.4)
-  else if (dfp$color[i] == 'V 0') acol = rgb(0, 0, 0)
-  else acol = rgb(0.5, 0.5, 0.5)
-  
-  if( dfp$type[i] != 'P'){
-    lines(xs, ys , col = acol , lwd=10, lend=1, ljoin=0)
-  }
-  else{
-    points(cos(offset + dfp$stop[i]), 
-           sin(offset + dfp$start[i]), 
-           pch=20, 
-           col=2, 
-           cex=3)
-  }
-  
-}
-
-text(0, 0, paste('time:', last_sim_time, '\n',
-                 'size:', p_size, '\n'
-), offset = 0.5,  cex = 1, col = 1)
-
-dev.off()
-
 # Fitness evolution
 
 D = DATA[ DATA$kept == "True", ] # Eliminate not kept sequences
@@ -384,7 +321,7 @@ pkept = ggplot(cts_kept, aes(x='', weight=freq, fill=event)) +
   ylab('') +
   theme(legend.position='none')
 
-pdf('res.pdf', width=5, height=8)
+pdf(paste(path_to_files, sep='','plt_diffevt.pdf'), width=5, height=8)
 multiplot(pall, pkept, cols=2)
 dev.off()
 
@@ -402,6 +339,68 @@ colnames(dat2) = c('rep', 'mean', 'sd', 'max')
 MEAN = mean(dat2$mean)
 SD = sd(dat2$mean)
 MAX = mean(dat2$max)
+
+# Plasmid plot
+
+PLAS = read.table(plasmid_file, header=T, sep='\t')
+
+P = PLAS[PLAS$repetition == 0,]
+last_sim_time = max(P$time)
+sub_P = P[P$repetition== 0 & P$time==last_sim_time,]
+sub_P = sub_P[order(sub_P$location),]
+
+s1 = sub_P$location - 1
+s2 = sub_P$location + sub_P$length - 1
+ty = sub_P$type
+or = sub_P$strand
+co = paste(sub_P$type, sub_P$strand)
+
+dfp = data.frame(s1, s2, ty, or, co)
+colnames(dfp) = row.names=c('start', 'stop', 'type', 'orient', 'color')
+p_size = max(sapply(dfp[,c('start', 'stop')], max))
+dfp$start = 2*pi*(1-dfp$start/p_size)
+dfp$stop  = 2*pi*(1-dfp$stop/p_size)
+
+offset = 90/360*pi*2
+
+pdf(paste(path_to_files, sep='', 'plt_plasmid.pdf'), width=6, height=6)
+plot(0, 0, 
+     col= NA, 
+     xlim=c(-1,1), 
+     ylim=c(-1, 1), 
+     main=NA,
+     xlab=NA, 
+     ylab=NA,
+     asp=1,
+     axes=F)
+for(i in 1:length(dfp$start)){
+  
+  xs = cos(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
+  ys = sin(offset + seq(dfp$stop[i], dfp$start[i], 0.01))
+  
+  if(dfp$color[i] == 'G 1') acol = rgb(0, 0.4, 1.0)
+  else if (dfp$color[i] == 'G -1') acol = rgb(0, 1.0, 0.4)
+  else if (dfp$color[i] == 'V 0') acol = rgb(0, 0, 0)
+  else acol = rgb(0.5, 0.5, 0.5)
+  
+  if( dfp$type[i] != 'P'){
+    lines(xs, ys , col = acol , lwd=10, lend=1, ljoin=0)
+  }
+  else{
+    points(cos(offset + dfp$stop[i]), 
+           sin(offset + dfp$start[i]), 
+           pch=20, 
+           col=2, 
+           cex=3)
+  }
+  
+}
+
+text(0, 0, paste('time:', last_sim_time, '\n',
+                 'size:', p_size, '\n'
+), offset = 0.5,  cex = 1, col = 1)
+
+dev.off()
 
 #--- RMD FILE ------------------------------------------------------------------
 

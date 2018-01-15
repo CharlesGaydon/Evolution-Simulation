@@ -14,11 +14,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r eruptions, echo=FALSE}
 
 D = read.table('plasmid.csv', header=T, sep='\t')
-Lrep = max(D$repetition)
-Drep = D[D$repetition == Lrep, ]
 
-tmin = min(Drep$time)
-tmax = max(Drep$time)
+repmin = min(D$repetition)
+repmax = max(D$repetition)
+
+tmin = min(D$time)
+tmax = max(D$time)
+
+inputPanel(
+  sliderInput("plasm_rep", label = "Plasmid repetition:",
+              min = repmin, max= repmax, value = repmin, step = 1, width='100%',               tick=F)
+)
 
 inputPanel(
   sliderInput("plasm_time", label = "Plasmid selection:",
@@ -28,6 +34,7 @@ inputPanel(
 
 renderPlot({
   
+  Drep = D[D$repetition == input$plasm_rep, ]
   
   sub_P = Drep[Drep$time == input$plasm_time,]
   sub_P = sub_P[order(sub_P$location),]
