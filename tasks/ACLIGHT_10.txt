@@ -1,0 +1,10 @@
+paramsfiles/ac_light_10/ACLIGHT_0.ini
+paramsfiles/ac_light_10/ACLIGHT_1.ini
+paramsfiles/ac_light_10/ACLIGHT_2.ini
+paramsfiles/ac_light_10/ACLIGHT_3.ini
+paramsfiles/ac_light_10/ACLIGHT_4.ini
+paramsfiles/ac_light_10/ACLIGHT_5.ini
+paramsfiles/ac_light_10/ACLIGHT_6.ini
+paramsfiles/ac_light_10/ACLIGHT_7.ini
+paramsfiles/ac_light_10/ACLIGHT_8.ini
+paramsfiles/ac_light_10/ACLIGHT_9.ini
