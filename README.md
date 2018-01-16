@@ -18,18 +18,17 @@ of the evolution process that could occur only trough the relative reorganisatio
 - [x] find other statistics
 - [x] handle rare exception in simulation computing... It wastes time
 
-# Hypothesis
+# Hypotheses
 
-- unit is 150 wide (insertions/deletions)
+- unit is 60 wide (insertions/deletions)
 - the smallest gene is larger than the unit
-- ...
 
-#### Authors
+# Authors
 
 - Charles GAYDON
 - Baptiste LAC
 
-### Organisation
+# Folder organisation
 
 - `display/` contains the R-script used to display the fitness graph;
 - `docs/` contains the server used to display the plasmid evolution;
@@ -39,7 +38,7 @@ of the evolution process that could occur only trough the relative reorganisatio
 - `simulations/` contains the simulation's results (history and plasmids);
 - `tasks/` contains tasks to launch pooled simulations.
 
-### Usage
+# Usage
 
 This code is designed for Linux. 
 
